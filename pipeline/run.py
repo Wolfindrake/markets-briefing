@@ -78,7 +78,7 @@ def build_rows(insts, cfg, offline: bool):
             row = auto
         elif k in man_vals and (man_vals[k].get("date") or man_date):
             row = row_from_values(inst, man_vals[k], "manual", man_date)
-        elif series:
+        elif series and inst["source"] != "manual":
             row = row_from_series(inst, series, "history")
             row["flags"].append("last stored value")
         elif k in seed and offline:
@@ -86,7 +86,7 @@ def build_rows(insts, cfg, offline: bool):
             row["flags"] = list(row.get("flags", [])) + ["seed data"]
         else:
             row = base_row(inst)
-            row["flags"].append("missing: add it to data/manual/latest.csv or upload the Investing.com CSV")
+            row["flags"].append("no free feed: upload the day's Investing.com CSV to fill it")
         if row["source"] in ("investing_csv", "manual"):
             fill_perf_from_history(row, [r for r in series if r["date"] < (row["date"] or "9999")])
         rows.append(row)
@@ -183,8 +183,15 @@ def main(argv=None):
         sheet_brief = {**brief, "week_ahead": upcoming[:7]}
     else:
         sheet_brief = {**text["sheet"], "week_ahead": upcoming[:7], "sp500_view": {}}
-    fs = build_pdf(DOWNLOADS / pdf_name, meta, sheet_rows, sheet_brief)
-    build_xlsx(DOWNLOADS / xlsx_name, meta, sheet_rows, sheet_brief)
+    # one date: any row not from the market close is starred and dated in the footnote (never passed off as fresh)
+    dd = lambda iso: f"{iso[8:10]}/{iso[5:7]}"  # noqa: E731
+    lag = [r for r in sheet_rows if r.get("date") and r["date"] != market_date]
+    print_rows = [dict(r, name=r["name"] + " *") if r in lag else r for r in sheet_rows]
+    if lag:
+        meta = {**meta, "source_note": meta["source_note"] + " * Last available value, not the " + dd(market_date) + " close: "
+                + ", ".join(f"{r['name']} ({dd(r['date'])})" for r in lag) + ". Upload the day's Investing.com CSV to update."}
+    fs = build_pdf(DOWNLOADS / pdf_name, meta, print_rows, sheet_brief)
+    build_xlsx(DOWNLOADS / xlsx_name, meta, print_rows, sheet_brief)
     shutil.copyfile(DOWNLOADS / pdf_name, DOWNLOADS / f"{prefix}-latest.pdf")
     shutil.copyfile(DOWNLOADS / xlsx_name, DOWNLOADS / f"{prefix}-latest.xlsx")
     log.info("sheet built: %s (font %.1f pt, %s text)", pdf_name, fs,
