@@ -211,7 +211,7 @@ _NUM = re.compile(r"[-+]?\d+(?:[.,]\d+)?")
 KINDS = [
     ("cb", ["fomc", "fed decision", "fed rate", "ecb", "boe", "bank of england", "boj", "bank of japan", "rate decision", "policy rate"]),
     ("inverse", ["unemployment", "jobless", "claims", "challenger"]),
-    ("inflation", ["cpi", "pce", "ppi", "inflation", "hicp", "prices", "hourly earnings", "wages"]),
+    ("inflation", ["cpi", "pce", "ppi", "inflation", "hicp", "prices", "price index", "deflator", "hourly earnings", "wages"]),
     ("growth", ["payroll", "nfp", "gdp", "pmi", "ism", "retail", "adp", "jolts", "sentiment", "confidence", "industrial",
                 "durable", "housing", "orders", "employment"]),
 ]
@@ -344,4 +344,5 @@ def surprises(week_ahead: list[dict], rows: list[dict], market_date: str, cpi_yo
                 q4,
             ],
         })
-    return out
+    out.sort(key=lambda x: (x.get("signal") not in ("", "inline"), x.get("date", "")), reverse=True)
+    return out[:8]

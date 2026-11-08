@@ -11,10 +11,10 @@ import argparse
 import json
 import logging
 import shutil
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from . import dashboard, extras, fetch, history, importers, journal, macro, method, narrative, news
+from . import calendar, dashboard, extras, fetch, history, importers, journal, macro, method, narrative, news, verify
 from .compute import PERF_KEYS, base_row, display, fill_perf_from_history, is_rate, row_from_series, row_from_values
 from .config import (CONTENT_DIR, DATA_DIR, DOWNLOADS, HISTORY_FILE, IMPORTS_DIR, JOURNAL_FILE, MANUAL_DIR, SEED_FILE, SITE_DATA,
                      instruments, load_yaml, settings)
@@ -90,7 +90,7 @@ def build_rows(insts, cfg, offline: bool):
         if row["source"] in ("investing_csv", "manual"):
             fill_perf_from_history(row, [r for r in series if r["date"] < (row["date"] or "9999")])
         rows.append(row)
-    return rows, stored, fetched, {"csv_file": csv_name, "csv_date": csv_date, "manual_date": man_date}
+    return rows, stored, fetched, {"csv_file": csv_name, "csv_date": csv_date, "manual_date": man_date, "csv_vals": csv_vals}
 
 
 def quality(rows, cfg, market_date):
@@ -139,7 +139,9 @@ def main(argv=None):
 
     brief = load_yaml(CONTENT_DIR / "briefing.yaml") if (CONTENT_DIR / "briefing.yaml").exists() else {}
     brief_current = bool(brief) and str(brief.get("date", "")) == market_date
-    week_all = [e for e in (brief or {}).get("week_ahead") or [] if isinstance(e, dict)]
+    week_user = [e for e in (brief or {}).get("week_ahead") or [] if isinstance(e, dict)]
+    cal_up, cal_rel = ([], []) if args.offline else calendar.build(market_date)
+    week_all = calendar.merge(week_user, cal_up + cal_rel)   # your entries win; the calendar fills the gaps
     upcoming = [e for e in week_all if str(e.get("actual", "") or "").strip() == ""
                 and (not e.get("date") or str(e.get("date")) > market_date)]
 
@@ -150,11 +152,24 @@ def main(argv=None):
 
     # ---- news (public RSS headlines) and the dashboard text (automatic, optionally improved by AI)
     feeds = (cfg.get("news") or {}).get("feeds", [])
-    heads = [] if args.offline else news.fetch(feeds, (cfg.get("news") or {}).get("max_age_hours", 36))
+    # headlines from the market session (New York midnight of the market date) up to the next open
+    ny = ZoneInfo("America/New_York")
+    md_ = date.fromisoformat(market_date)
+    nxt = md_ + timedelta(days=3 if md_.weekday() == 4 else 1)
+    since = datetime(md_.year, md_.month, md_.day, tzinfo=ny).astimezone(ZoneInfo("UTC"))
+    until = datetime(nxt.year, nxt.month, nxt.day, 9, 30, tzinfo=ny).astimezone(ZoneInfo("UTC"))
+    heads = [] if args.offline else news.fetch(feeds, since=since, until=until, session_date=market_date)
     text = narrative.auto(rows, market_date, as_of, heads, upcoming, tape_, surprises_)
     if not args.offline:
         text = narrative.merge(text, narrative.ai(rows, market_date, heads, upcoming, cfg, tape_, surprises_, macro_),
                                {h["url"] for h in heads})
+    # ---- cross-checks (shown on the site as a scorecard)
+    sh = text["sheet"]
+    claims = [sh.get("overview", "")] + [h for h in sh.get("highlights", []) if "expected" in h] + \
+             [b for v in (sh.get("performance") or {}).values() for b in v]
+    cross = verify.run(rows, market_date, inputs.get("csv_vals"), inputs.get("csv_date"), texts=claims,
+                       calendar_rows=week_all, headlines=None if args.offline else heads, offline=args.offline)
+    log.info("cross-checks: %d/%d passed", cross["passed"], cross["total"])
     trump_heads = news.about(heads, ["Trump", "White House", "tariff", "Bessent", "Warsh"], 10)
 
     # ---- the one-page sheet: your own text if current, else the AI/automatic text
@@ -165,9 +180,9 @@ def main(argv=None):
     meta = {"title": cfg["sheet"]["title"], "market_date": market_date, "as_of": as_of,
             "source_note": cfg["sheet"]["source_note"], "team_label": cfg["site"].get("team_label", "")}
     if brief_current:
-        sheet_brief = {**brief, "week_ahead": upcoming}
+        sheet_brief = {**brief, "week_ahead": upcoming[:7]}
     else:
-        sheet_brief = {**text["sheet"], "week_ahead": upcoming, "sp500_view": {}}
+        sheet_brief = {**text["sheet"], "week_ahead": upcoming[:7], "sp500_view": {}}
     fs = build_pdf(DOWNLOADS / pdf_name, meta, sheet_rows, sheet_brief)
     build_xlsx(DOWNLOADS / xlsx_name, meta, sheet_rows, sheet_brief)
     shutil.copyfile(DOWNLOADS / pdf_name, DOWNLOADS / f"{prefix}-latest.pdf")
@@ -202,7 +217,7 @@ def main(argv=None):
                "lessons": method.lessons(rows, tape_, surprises_, macro_), "library": method.library(),
                "steps": method.steps(rows, tape_, surprises_, over, upcoming, view, heads, text["simple"].get("forces"))}
 
-    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
+    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
                            issues=issues, headlines=heads, trump_heads=trump_heads, inputs=inputs, downloads=downloads, cfg=cfg,
                            prev_path=SITE_DATA / "dashboard.json", snaps_path=DATA_DIR / "snapshots.json", history=hist_out)
     (SITE_DATA / "dashboard.json").write_text(json.dumps(data, default=str, ensure_ascii=False), encoding="utf-8")

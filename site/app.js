@@ -45,7 +45,11 @@
     var f = $("#fresh"); clear(f);
     var h = (Date.now() - new Date(D.updatedAt).getTime()) / 36e5;
     var cls = h < 18 ? "g" : h < 72 ? "y" : "r";
-    f.append(el("span", "dot " + cls), "Updated " + fmtTime(D.updatedAt) + (D.aiUsed ? " · AI commentary" : " · auto summary"));
+    var md = D.marketDate ? new Date(D.marketDate + "T12:00:00") : null;
+    var mdTxt = md ? md.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
+    var cc = D.crosscheck || {};
+    f.append(el("span", "dot " + cls), "Market close " + mdTxt + " · refreshed " + fmtTime(D.updatedAt));
+    if (cc.total) { var b = el("a", "ccbadge " + (cc.passed === cc.total ? "ok" : "warn"), (cc.passed === cc.total ? "✓ " : "! ") + cc.passed + "/" + cc.total + " checks"); b.href = "#sourcesCard"; b.addEventListener("click", function () { var m = document.querySelector('.nav button[data-page="markets"]'); if (m) m.click(); setTimeout(function () { $("#sourcesCard").scrollIntoView({ behavior: "smooth" }); }, 50); }); f.append(" ", b); }
   }
   function renderChecks() {
     var box = $("#checks"); var u = (D.verification && D.verification.unverifiedItems) || [];
@@ -131,6 +135,13 @@
   function renderSources() {
     var v = D.verification || {}; var box = clear($("#verify"));
     box.append(el("p", null, v.note || ""));
+    var cc = D.crosscheck || {};
+    if ((cc.items || []).length) {
+      box.append(el("p", "cc-score", "Cross-checks: " + cc.passed + " of " + cc.total + " passed"));
+      var ul0 = el("ul", "cc");
+      cc.items.forEach(function (i) { var li = el("li", i.ok ? "ok" : "warn"); li.append(el("b", null, (i.ok ? "✓ " : "! ") + i.group + ": " + i.check), el("small", null, i.detail)); ul0.append(li); });
+      box.append(ul0);
+    }
     if ((v.verifiedItems || []).length) box.append(el("p", "muted", "Data sources used today: " + v.verifiedItems.join(", ")));
     var ul = clear($("#sources"));
     (D.sources || []).forEach(function (s) { var li = el("li"); li.append(link(s.url, s.name)); ul.append(li); });
@@ -144,8 +155,10 @@
   function heatColor(v, rate) {
     if (v == null || isNaN(v)) return "#8a94a3";
     var x = rate ? v / 15 : v / 2.5; x = Math.max(-1, Math.min(1, x));
-    var a = 0.35 + 0.65 * Math.abs(x);
-    return x >= 0 ? "rgba(10,138,58," + a.toFixed(2) + ")" : "rgba(211,47,47," + a.toFixed(2) + ")";
+    var a = 0.38 + 0.62 * Math.abs(x);
+    var css = getComputedStyle(document.documentElement);
+    var rgb = (x >= 0 ? css.getPropertyValue("--heat-up") : css.getPropertyValue("--heat-down")).trim() || (x >= 0 ? "12,118,81" : "180,35,24");
+    return "rgba(" + rgb + "," + a.toFixed(2) + ")";
   }
   function renderHeat() {
     var box = clear($("#heat"));
@@ -167,7 +180,7 @@
     var ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
     svg.setAttribute("width", w); svg.setAttribute("height", h); svg.setAttribute("viewBox", "0 0 " + w + " " + h);
     var pl = document.createElementNS(ns, "polyline"); pl.setAttribute("points", pts); pl.setAttribute("fill", "none");
-    pl.setAttribute("stroke", nums[nums.length - 1] >= nums[0] ? "#0a8a3a" : "#d32f2f"); pl.setAttribute("stroke-width", "1.6");
+    pl.setAttribute("stroke", getComputedStyle(document.documentElement).getPropertyValue(nums[nums.length - 1] >= nums[0] ? "--up" : "--down").trim()); pl.setAttribute("stroke-width", "1.6");
     svg.append(pl); return svg;
   }
   function renderSeven() {
@@ -218,7 +231,7 @@
     var ul = clear($("#newsList")); var items = newsList();
     if (!items.length) { ul.append(el("li", "muted", "No headlines for this day.")); return; }
     items.forEach(function (n) {
-      var li = el("li"); li.append(link(n.url, n.headline), el("div", "m", n.source + " · " + n.dateISO));
+      var li = el("li"); li.append(link(n.url, n.headline), el("div", "m", n.source + " · " + n.dateISO + (n.session ? " · session day" : " · after the close")));
       if (n.blurb) li.append(el("p", null, n.blurb)); ul.append(li);
     });
   }
@@ -288,7 +301,7 @@
       var d = el("div", "chk"); d.append(el("b", null, c.asset));
       d.append(el("div", "v " + tone(c.value), c.value));
       var m = c.match === true ? el("span", "ok", "✓ ") : c.match === false ? el("span", "no", "✗ ") : el("span", null, "");
-      var line = el("small"); line.append(m, "Map expects " + (ARROW[c.expected] || c.expected) + ", got " + (ARROW[c.actual] || c.actual));
+      var line = el("small"); line.append(m, (c.expected && c.expected !== "—" ? "Map expects " + (ARROW[c.expected] || c.expected) + ", got " : "Moved ") + (ARROW[c.actual] || c.actual));
       d.append(line); g.append(d);
     });
     box.append(g);

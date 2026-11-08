@@ -153,7 +153,7 @@ def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
         over.append(f"{s['event']} {s['actual']} vs {s['consensus']} expected: {s['label'].lower()}.")
 
     hl = [f"{s['event']}: {s['actual']} vs {s['consensus']} expected (previous {s['previous']}). {s['label']}." for s in surp[:3]]
-    hl += [f"{h['source']}: {h['headline']}" for h in headlines[: max(0, 7 - len(hl))]]
+    hl += [f"{h['headline'].rstrip('.')} ({h['source']})." for h in headlines[: max(0, 8 - len(hl))]]
     return {"overview": " ".join(over), "highlights": hl, "performance": {"equities": eq, "fixed_income": fi, "others": ot}}
 
 
@@ -252,7 +252,7 @@ def auto(rows: list[dict], market_date: str, as_of: str, headlines: list[dict], 
     }
     sheet = sheet_text(rows, headlines, tape_, surprises_)
     return {"overview": {"date": _nice_date(market_date), "asOf": as_of, "items": items}, "simple": simple, "sheet": sheet,
-            "news": [{k: h[k] for k in ("headline", "dateISO", "source", "url", "blurb")} for h in headlines[:12]],
+            "news": [{k: h.get(k) for k in ("headline", "dateISO", "source", "url", "blurb", "session")} for h in headlines[:12]],
             "trump": None, "ai_used": False}
 
 

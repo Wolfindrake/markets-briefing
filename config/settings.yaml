@@ -4,7 +4,7 @@ site:
   title: "Markets Briefing"
   subtitle: "Daily cross-asset dashboard and one-page briefing sheet"
   team_label: ""            # e.g. your team name, printed in the sheet footer if set
-  repo_url: ""              # optional, e.g. https://github.com/you/markets-briefing (found automatically on github.io)
+  repo_url: "https://github.com/Wolfindrake/markets-briefing"   # optional, e.g. https://github.com/you/markets-briefing (found automatically on github.io)
 
 timezones:
   local: "Europe/Madrid"    # shown as CET/CEST on the sheet
@@ -30,7 +30,6 @@ news:
   feeds:
     - {source: "Financial Times", url: "https://www.ft.com/markets?format=rss"}
     - {source: "Financial Times", url: "https://www.ft.com/world?format=rss"}
-    - {source: "Yahoo Finance", url: "https://finance.yahoo.com/news/rssindex"}
     - {source: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
     - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"}
     - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"}

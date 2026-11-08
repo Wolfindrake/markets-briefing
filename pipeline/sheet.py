@@ -100,7 +100,8 @@ def _pdf_story(meta, rows, brief, fs):
 
     story.append(Paragraph("Market commentary: what happened since the last session", h2))
     if brief.get("overview"):
-        story += [Paragraph("Overview", h3), Paragraph(escape(brief["overview"]), small)]
+        story.append(Paragraph("Overview", h3))
+        story += bullets([brief["overview"]], "•")   # the professor writes the overview as one bullet
     if brief.get("highlights"):
         story.append(Paragraph("Highlights", h3))
         story += bullets(brief["highlights"], "•")

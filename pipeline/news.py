@@ -14,6 +14,8 @@ from email.utils import parsedate_to_datetime
 
 import requests
 
+from zoneinfo import ZoneInfo
+NY = ZoneInfo("America/New_York")
 log = logging.getLogger("news")
 UA = {"User-Agent": "Mozilla/5.0 (compatible; markets-briefing/1.0)"}
 
@@ -39,7 +41,8 @@ def _date(s: str):
     return d
 
 
-def fetch(feeds: list[dict], max_age_hours: int = 36, limit: int = 40) -> list[dict]:
+def fetch(feeds: list[dict], max_age_hours: int = 36, limit: int = 40, since=None, until=None, session_date: str | None = None) -> list[dict]:
+    """since/until (UTC datetimes) anchor the headlines to the market session the data refers to."""
     items = []
     now = datetime.now(timezone.utc)
     for f in feeds or []:
@@ -59,15 +62,18 @@ def fetch(feeds: list[dict], max_age_hours: int = 36, limit: int = 40) -> list[d
                 when = _date(it.findtext("pubDate") or it.findtext("{http://www.w3.org/2005/Atom}updated") or "")
                 if not title or not link.startswith("http"):
                     continue
-                if when and now - when > timedelta(hours=max_age_hours):
+                if when and since is not None and (when < since or (until is not None and when > until)):
+                    continue
+                if when and since is None and now - when > timedelta(hours=max_age_hours):
                     continue
                 items.append({"headline": title, "url": link, "source": source,
                               "dateISO": (when or now).date().isoformat(), "ts": (when or now).isoformat(),
-                              "blurb": _text(desc, 280)})
+                              "blurb": _text(desc, 280),
+                              "session": bool(session_date and when and when.astimezone(NY).date().isoformat() == session_date)})
         except Exception as exc:  # noqa: BLE001
             log.warning("feed failed %s: %s", url, exc)
     seen, out = set(), []
-    for it in sorted(items, key=lambda x: x["ts"], reverse=True):
+    for it in sorted(items, key=lambda x: (x.get("session", False), x["ts"]), reverse=True):
         k = re.sub(r"\W+", "", it["headline"].lower())[:80]
         if k in seen:
             continue
