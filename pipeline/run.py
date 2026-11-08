@@ -43,6 +43,12 @@ def build_rows(insts, cfg, offline: bool):
         fetched.update(fetch.treasury({i["key"]: i["ticker"] for i in insts if i["source"] == "treasury" and i.get("ticker")}))
         fetched.update(fetch.bundesbank({i["key"]: i["ticker"] for i in insts if i["source"] == "bundesbank" and i.get("ticker")}))
         fetched.update(fetch.mof_japan({i["key"]: i["ticker"] for i in insts if i["source"] == "mof" and i.get("ticker")}))
+        # Align everything to the latest US equity close: futures and crypto keep trading (and Yahoo opens a new
+        # bar on Sunday evening), which would otherwise show a near-zero "change" for the next, unfinished session.
+        us_close = max((s[-1]["date"] for k, s in fetched.items() if k in ("spx", "ixic", "dji") and s), default=None)
+        if us_close:
+            fetched = {k: [r for r in s if r["date"] <= us_close] for k, s in fetched.items()}
+            fetched = {k: s for k, s in fetched.items() if s}
 
     csv_vals, csv_date, csv_name = {}, None, None
     f = importers.latest_investing_csv(IMPORTS_DIR)
@@ -177,7 +183,7 @@ def main(argv=None):
     hist_out = {}
     for inst in insts:
         k = inst["key"]
-        ser = history.merge_series(stored_after.get(k, []), fetched.get(k, []))
+        ser = [r for r in history.merge_series(stored_after.get(k, []), fetched.get(k, [])) if r["date"] <= market_date]
         hist_out[k] = {"name": inst["name"], "unit": inst["unit"], "points": [[r["date"], round(r["close"], 6)] for r in ser][-keep:]}
 
     # ---- Lords of Finance journal (real game rules)
