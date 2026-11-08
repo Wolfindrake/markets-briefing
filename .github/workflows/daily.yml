@@ -1,0 +1,83 @@
+name: Daily refresh
+
+on:
+  schedule:
+    # 22:30 UTC on weekdays = after the US close all year (17:30 New York in winter, 18:30 in summer).
+    # GitHub may start scheduled runs late; use "Run workflow" for an on-demand refresh.
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: "Also write an AI first draft to content/draft.yaml (needs ANTHROPIC_API_KEY secret)"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "content/**"
+      - "data/imports/**"
+      - "data/manual/**"
+      - "data/journal.csv"
+      - "config/**"
+      - "pipeline/**"
+      - "site/*.html"
+      - "site/*.css"
+      - "site/*.js"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Build data, site and sheet
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.draft }}" = "true" ]; then
+            python -m pipeline.run --draft
+          else
+            python -m pipeline.run
+          fi
+
+      - name: Save history and outputs to the repo
+        run: |
+          git config user.name "briefing-bot"
+          git config user.email "briefing-bot@users.noreply.github.com"
+          for p in data/history data/snapshots.json site/data site/downloads content/draft.yaml; do
+            if [ -e "$p" ]; then git add "$p"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git commit -m "Data refresh $(date -u +%Y-%m-%d)"
+            git pull --rebase --autostash || true
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
