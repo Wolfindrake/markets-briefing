@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import os
 import re
 from datetime import date
 
@@ -37,20 +38,40 @@ SERIES = {
 }
 
 
+FRED_API = "https://api.stlouisfed.org/fred/series/observations"
+_fails = {"n": 0}
+
+
 def fred(series_id: str) -> list[tuple[str, float]]:
+    """FRED series. With a free FRED_API_KEY (repo secret) the official API is used: reliable from cloud servers.
+    Without it, the public CSV download is tried; after 2 failures the rest is skipped so a run never stalls."""
+    if _fails["n"] >= 2:
+        return []
+    key = os.environ.get("FRED_API_KEY", "").strip()
     try:
-        r = requests.get(FRED_CSV.format(series_id), headers=UA, timeout=30)
-        r.raise_for_status()
         out = []
-        for row in csv.reader(io.StringIO(r.text)):
-            if len(row) >= 2 and re.match(r"\d{4}-\d{2}-\d{2}$", row[0]):
+        if key:
+            r = requests.get(FRED_API, params={"series_id": series_id, "api_key": key, "file_type": "json"}, headers=UA, timeout=20)
+            r.raise_for_status()
+            for o in r.json().get("observations", []):
                 try:
-                    out.append((row[0], float(row[1])))
-                except ValueError:
+                    out.append((o["date"], float(o["value"])))
+                except (KeyError, ValueError):
                     continue
+        else:
+            r = requests.get(FRED_CSV.format(series_id), headers=UA, timeout=12)
+            r.raise_for_status()
+            for row in csv.reader(io.StringIO(r.text)):
+                if len(row) >= 2 and re.match(r"\d{4}-\d{2}-\d{2}$", row[0]):
+                    try:
+                        out.append((row[0], float(row[1])))
+                    except ValueError:
+                        continue
         return out
     except Exception as exc:  # noqa: BLE001
-        log.warning("FRED %s failed: %s", series_id, exc)
+        _fails["n"] += 1
+        log.warning("FRED %s failed: %s%s", series_id, exc,
+                    " (skipping the remaining FRED series; add a free FRED_API_KEY secret for reliable access)" if _fails["n"] >= 2 else "")
         return []
 
 
