@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Markets Briefing</title>
+<meta name="description" content="Daily global markets dashboard: stocks, bonds, FX, commodities, news, plain-English explanations and a one-page briefing sheet.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="wrap mast-row">
+    <div class="brand"><span class="logo" aria-hidden="true">MB</span><div><b id="siteTitle">Markets Briefing</b><small id="siteSub">Global markets, explained daily</small></div></div>
+    <div class="mast-right">
+      <div class="when" role="group" aria-label="Show today or yesterday">
+        <button data-when="today" class="on">Today</button><button data-when="yesterday">Yesterday</button>
+      </div>
+      <span class="fresh" id="fresh">Loading…</span>
+      <details class="upd" id="upd" hidden>
+        <summary class="btn primary">↻ Update</summary>
+        <div class="upd-menu">
+          <a id="updRun" target="_blank" rel="noopener"><b>Refresh now</b><small>GitHub › Run workflow (2–4 min)</small></a>
+          <a id="updEdit" target="_blank" rel="noopener"><b>Edit calendar, actuals &amp; my call</b><small>content/briefing.yaml</small></a>
+          <a id="updCsv" target="_blank" rel="noopener"><b>Upload Investing.com CSV</b><small>into data/imports</small></a>
+          <a id="updLog" target="_blank" rel="noopener"><b>See run history</b><small>check a refresh worked</small></a>
+        </div>
+      </details>
+    </div>
+  </div>
+  <nav class="wrap nav" aria-label="Sections">
+    <button data-page="markets" class="on">Markets</button>
+    <button data-page="macro">Macro &amp; Data</button>
+    <button data-page="explained">Explained</button>
+    <button data-page="news">News</button>
+    <button data-page="trump">Trump Impact</button>
+    <button data-page="lof">Lords of Finance</button>
+    <button data-page="sheet">Briefing Sheet</button>
+  </nav>
+  <div class="ticker" aria-label="Market ticker"><div class="ticker-track" id="ticker"></div></div>
+</header>
+
+<main id="main" class="wrap">
+  <div id="checks" class="alert" hidden></div>
+
+  <!-- ===================== MARKETS ===================== -->
+  <section class="page" id="page-markets">
+    <div class="section-head"><h2 id="heroTitle">Today in one look</h2><span class="muted" id="heroAsOf"></span></div>
+    <div class="hero" id="hero"></div>
+
+    <div class="layout">
+      <div class="col-main">
+        <article class="card" id="tapeCard">
+          <div class="card-head"><h2>Reading the tape</h2><span class="muted">The day on the professor's reaction map</span></div>
+          <div id="tape"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Markets</h2>
+            <div class="tabs" role="tablist" id="mktTabs">
+              <button data-g="equities" class="on" role="tab">Equities</button>
+              <button data-g="fixedIncome" role="tab">Bonds &amp; Rates</button>
+              <button data-g="others" role="tab">FX, Commodities &amp; Crypto</button>
+            </div>
+          </div>
+          <p class="note" id="snapNote"></p>
+          <div class="tscroll"><table class="mkt" id="mktTable"></table></div>
+          <div class="why"><b>What happened &amp; why</b><p id="driverNote"></p></div>
+          <p class="hint">Tap a row for its chart. Yield and CDS changes in basis points (bp).</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Why markets moved</h2><span class="muted" id="commentaryNote"></span></div>
+          <div class="forces" id="forces"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Week ahead</h2></div>
+          <ul class="week" id="week"></ul>
+        </article>
+
+        <article class="card" id="sourcesCard">
+          <div class="card-head"><h2>Sources &amp; verification</h2></div>
+          <div id="verify"></div>
+          <ul class="srcs" id="sources"></ul>
+        </article>
+      </div>
+
+      <aside class="col-side">
+        <article class="card">
+          <div class="card-head"><h2>Market internals</h2></div>
+          <ul class="internals" id="internals"></ul>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Top movers</h2>
+            <div class="tabs small" id="moverTabs"><button data-m="gainers" class="on">Gainers</button><button data-m="losers">Losers</button></div></div>
+          <ul class="movers" id="movers"></ul>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Market map</h2></div>
+          <div class="heat" id="heat"></div>
+          <p class="hint">Daily change. Rates show bp.</p>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Last 7 sessions</h2></div>
+          <div class="tscroll"><table class="seven" id="seven"></table></div>
+        </article>
+        <article class="card cta">
+          <h2>Briefing sheet</h2>
+          <p>One page, class format, built with today's numbers.</p>
+          <div class="btns"><a class="btn primary" id="dlPdf2" download>PDF</a><a class="btn" id="dlXlsx2" download>Excel</a></div>
+        </article>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== MACRO & DATA ===================== -->
+  <section class="page" id="page-macro" hidden>
+    <div class="grid2">
+      <article class="card"><h2>Where are we in the cycle?</h2><div id="cycle"></div></article>
+      <article class="card"><h2>Is policy really tight?</h2><div id="realRate"></div></article>
+    </div>
+    <article class="card"><div class="card-head"><h2>Macro dashboard</h2><span class="muted" id="macroAsOf"></span></div>
+      <div class="tscroll"><table class="plain" id="macroTable"></table></div>
+      <p class="hint">US data from FRED. Add readings FRED lacks (e.g. ISM PMI) under <code>macro_extra</code> in content/briefing.yaml.</p></article>
+    <article class="card"><div class="card-head"><h2>Data vs expectations</h2><span class="muted">Markets trade the surprise, not the level</span></div>
+      <div id="surprises"></div>
+      <p class="hint">Type the <code>actual</code> next to a release in content/briefing.yaml and the four questions are answered here.</p></article>
+    <article class="card"><h2>The reaction map</h2><div class="tscroll"><table class="plain" id="reactMap"></table></div>
+      <p class="hint">Typical first reactions. The regime matters: when inflation is the main worry, good growth news can be bad news for stocks.</p></article>
+  </section>
+
+  <!-- ===================== EXPLAINED ===================== -->
+  <section class="page" id="page-explained" hidden>
+    <article class="card big"><h2>The big picture</h2><p class="lead" id="bigPicture"></p></article>
+    <article class="card"><h2>Today's lessons</h2><div class="lessons" id="lessons"></div></article>
+    <article class="card"><h2>How it connects</h2><div class="chain" id="chain"></div><p class="muted" id="chainNote"></p></article>
+    <div class="grid2">
+      <article class="card"><h2>Key numbers</h2><div class="kn" id="keyNumbers"></div></article>
+      <article class="card"><h2>What to watch</h2><ul class="watch" id="watch"></ul></article>
+    </div>
+    <article class="card"><h2>Why markets moved, in plain English</h2><div class="forces" id="forcesSimple"></div></article>
+    <article class="card"><h2>Around the world</h2><div class="world" id="world"></div></article>
+    <article class="card"><details><summary><h2 class="inline">Rules of thumb</h2> <span class="muted">(tap to open)</span></summary><div class="lessons" id="library"></div></details></article>
+    <article class="card"><h2>Words you'll hear</h2><dl class="gloss" id="glossary"></dl></article>
+  </section>
+
+  <!-- ===================== NEWS ===================== -->
+  <section class="page" id="page-news" hidden>
+    <article class="card"><div class="card-head"><h2>Latest news</h2><span class="muted">Headlines link to the publisher</span></div>
+      <ul class="news" id="newsList"></ul></article>
+  </section>
+
+  <!-- ===================== TRUMP IMPACT ===================== -->
+  <section class="page" id="page-trump" hidden>
+    <article class="card"><div class="card-head"><h2 id="tiTitle">Trump market impact</h2><span class="muted" id="tiUpdated"></span></div>
+      <ul class="bullets" id="tiBullets"></ul><p id="tiSummary"></p></article>
+    <div id="tiMoves"></div>
+    <div class="grid2">
+      <article class="card"><h2>Looking ahead</h2><div id="tiForward"></div></article>
+      <article class="card"><h2>Scenarios</h2><div id="tiScenarios"></div></article>
+    </div>
+    <article class="card"><h2>Sources</h2><ul class="srcs" id="tiSources"></ul><p class="hint" id="tiDisclaimer"></p></article>
+  </section>
+
+  <!-- ===================== LORDS OF FINANCE ===================== -->
+  <section class="page" id="page-lof" hidden>
+    <article class="card lof"><h2>Lords of Finance</h2>
+      <p class="muted">Long or short the S&amp;P 500 before 9:30 New York time on a class day. Entered at the open, held to the close of the day before the next class. A missed round counts as wrong.</p>
+      <div id="lofCurrent"></div><div class="kpis" id="lofKpis"></div></article>
+    <article class="card"><h2>History</h2><div class="tscroll"><table class="plain" id="lofHistory"></table></div>
+      <p class="hint" id="lofHow">Log each call in <code>data/journal.csv</code>: session_date, call (Long/Short), reason, conviction.</p></article>
+  </section>
+
+  <!-- ===================== SHEET ===================== -->
+  <section class="page" id="page-sheet" hidden>
+    <article class="card"><h2>Today's briefing sheet</h2>
+      <p>One page in the course format: the full table, market performance, commentary and week ahead. Rebuilt after every refresh.</p>
+      <div class="btns"><a class="btn primary" id="dlPdf" download>Download PDF</a><a class="btn" id="dlXlsx" download>Download Excel</a></div>
+      <p class="hint" id="sheetNote"></p></article>
+    <article class="card"><h2>Prepare in 5 steps</h2>
+      <p class="muted">The briefing guideline's steps, filled in with today's evidence. Your job: check it, add the why, decide your S&amp;P 500 view.</p>
+      <ol class="steps" id="steps"></ol></article>
+    <article class="card"><h2>Archive</h2><ul class="archive" id="archive"></ul></article>
+  </section>
+</main>
+
+<div class="modal" id="chartModal" hidden role="dialog" aria-modal="true" aria-labelledby="chartTitle">
+  <div class="modal-box">
+    <div class="card-head"><h2 id="chartTitle">Chart</h2><button class="x" id="chartClose" aria-label="Close">×</button></div>
+    <div class="tabs small" id="rangeTabs"><button data-r="30">1M</button><button data-r="91">3M</button><button data-r="365" class="on">1Y</button><button data-r="1095">3Y</button></div>
+    <div class="chartbox"><canvas id="chart" role="img" aria-label="Price history"></canvas></div>
+    <p class="hint" id="chartNote"></p>
+  </div>
+</div>
+
+<footer class="wrap foot"><p>Data: Yahoo Finance, US Treasury, Deutsche Bundesbank, Japan Ministry of Finance, FRED and your Investing.com export. News headlines link to their publishers. For education only, not investment advice.</p></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

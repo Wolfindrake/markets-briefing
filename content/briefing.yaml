@@ -1,0 +1,42 @@
+# THE ONLY FILE YOU EDIT. Everything is optional: with nothing here the site and sheet still build.
+# Edit on GitHub (pencil icon -> Commit). The site rebuilds in about 2 minutes.
+#
+#   1. calendar   : upcoming releases with consensus. After a release, type the `actual`:
+#                   the site then answers the professor's four questions for it (surprise, hawkish/dovish,
+#                   what it means for the central bank, did markets react as the reaction map says).
+#   2. sp500_view : your Lords of Finance call. It is logged and scored automatically.
+#   3. your words : only if you want your own text on the sheet instead of the automatic/AI text.
+#                   Set `date` to the market date of the data (e.g. 2026-11-06), otherwise it is ignored.
+
+# ---------------------------------------------------------------- 1. calendar (week ahead + data surprises)
+# date: YYYY-MM-DD (needed to sort past vs upcoming). actual: fill in after the release.
+week_ahead:
+  - {date: 2026-10-29, day: "Thu 29 Oct", region: "US", event: "GDP Q3 advance, annualised", consensus: "3.2%", previous: "2.2%", actual: "3.4%"}
+  - {date: 2026-11-05, day: "Thu 5 Nov",  region: "UK", event: "Bank of England rate decision", consensus: "4.00%", previous: "3.75%", actual: "4.00%"}
+  - {date: 2026-11-06, day: "Fri 6 Nov",  region: "US", event: "Nonfarm payrolls (Oct)", consensus: "65k", previous: "29k", actual: "165k"}
+  - {date: 2026-11-06, day: "Fri 6 Nov",  region: "US", event: "Unemployment rate (Oct)", consensus: "4.2%", previous: "4.2%", actual: "4.1%"}
+  - {date: 2026-11-09, day: "Mon 9 Nov",  region: "CN", event: "China CPI (Oct). BoE Governor Bailey speech", consensus: "", previous: "+0.9% y/y"}
+  - {date: 2026-11-10, day: "Tue 10 Nov", region: "US", event: "CPI (Oct), 13:30 GMT", consensus: "", previous: "3.7%"}
+  - {date: 2026-11-11, day: "Wed 11 Nov", region: "US", event: "Veterans Day: bond market closed, equities open", consensus: "", previous: ""}
+  - {date: 2026-12-09, day: "Ahead",      region: "US", event: "FOMC decision 9 December", consensus: "", previous: "3.75%-4.00%"}
+
+# Readings the free sources don't have (FRED covers GDP, jobs, CPI, PCE, policy rates, wages).
+macro_extra:
+  - {name: "Manufacturing PMI (ISM)", latest: "Sep 2026: 54.5 (9th month above 50)", previous: "", measures: "Business survey; above 50 = expansion", impact: "Leading signal for cyclical stocks"}
+
+# ---------------------------------------------------------------- 2. Lords of Finance
+sp500_view:
+  session_date: ""   # class day of the call, e.g. 2026-11-10
+  call: ""           # Long or Short
+  reason: ""
+  conviction: ""     # low / medium / high
+
+# ---------------------------------------------------------------- 3. your own words for the sheet (optional)
+date: ""
+overview: ""
+highlights: []
+performance:
+  equities: []
+  fixed_income: []
+  others: []
+sources: []

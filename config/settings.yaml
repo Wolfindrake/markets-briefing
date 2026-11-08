@@ -1,0 +1,52 @@
+# General settings. Edit freely.
+
+site:
+  title: "Markets Briefing"
+  subtitle: "Daily cross-asset dashboard and one-page briefing sheet"
+  team_label: ""            # e.g. your team name, printed in the sheet footer if set
+  repo_url: ""              # optional, e.g. https://github.com/you/markets-briefing (found automatically on github.io)
+
+timezones:
+  local: "Europe/Madrid"    # shown as CET/CEST on the sheet
+  market: "America/New_York"
+
+sheet:
+  title: "MARKETS BRIEFING"
+  source_note: "Source: Yahoo Finance, US Treasury and Investing.com watchlist export where provided. Yields and CDS: changes in basis points (bp)."
+  file_prefix: "Market-Briefing"
+
+quality:
+  stale_after_days: 4        # a value older than this (vs the run date) is flagged as stale
+  big_move_pct: 5.0          # daily moves larger than this are flagged for a second look (non-rate instruments)
+  big_move_bp: 25            # daily yield moves larger than this are flagged
+
+history:
+  keep_days_in_site: 800     # days of closes published for charts
+
+# Headlines for the News section and the commentary. Public RSS feeds only: headline, short summary and a
+# link back to the publisher. Paywalled article text is never fetched. Add or remove feeds freely.
+news:
+  max_age_hours: 36
+  feeds:
+    - {source: "Financial Times", url: "https://www.ft.com/markets?format=rss"}
+    - {source: "Financial Times", url: "https://www.ft.com/world?format=rss"}
+    - {source: "Yahoo Finance", url: "https://finance.yahoo.com/news/rssindex"}
+    - {source: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
+    - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"}
+    - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"}
+
+# AI commentary (why markets moved, plain-English cards, Trump Impact, sheet text).
+# Used automatically when an ANTHROPIC_API_KEY repository secret exists; otherwise the site shows an
+# automatic summary built from the numbers and headlines.
+ai:
+  enabled: true
+  model: "claude-sonnet-5-5"
+  max_headlines: 40
+
+# Legacy: separate draft file for content/briefing.yaml (python -m pipeline.run --draft)
+draft:
+  enabled: false
+  model: "claude-sonnet-5-5"
+  max_headlines: 40
+  rss_feeds:
+    - "https://www.ft.com/markets?format=rss"
