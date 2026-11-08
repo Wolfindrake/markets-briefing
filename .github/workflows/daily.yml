@@ -41,6 +41,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main          # always start from the latest data saved by the previous run
 
       - uses: actions/setup-python@v5
         with:
@@ -72,7 +74,7 @@ jobs:
           done
           if ! git diff --cached --quiet; then
             git commit -m "Data refresh $(date -u +%Y-%m-%d)"
-            git pull --rebase --autostash || true
+            git pull --rebase -X theirs --autostash || true   # if runs overlap, today's freshly built files win
             git push
           fi
 
