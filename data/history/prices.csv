@@ -13,7 +13,7 @@ date,key,open,close,source
 2026-11-05,ibx50,28404.42,28244.64,investing_csv
 2026-11-05,ief,91.46,91.97,investing_csv
 2026-11-05,ixic,25558.11,24315.0,investing_csv
-2026-11-05,jp10,2.757,2.769,investing_csv
+2026-11-05,jp10,,2.806,mof
 2026-11-05,kospi,5580.09,5383.8,investing_csv
 2026-11-05,move,99.97,93.88,investing_csv
 2026-11-05,msciem,1551.52,1538.39,investing_csv
