@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Markets Briefing – Investing.com sync",
+  "short_name": "MB Sync",
+  "version": "1.1.0",
+  "description": "Reads your Investing.com watchlist and Bloomberg/FT market headlines in this browser and feeds them to your Markets Briefing site.",
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": ["https://www.investing.com/*", "https://www.bloomberg.com/*", "https://www.ft.com/*", "https://api.github.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Sync Investing.com → Markets Briefing",
+              "default_icon": { "192": "icon-192.png" } },
+  "options_page": "options.html",
+  "icons": { "192": "icon-192.png", "512": "icon-512.png" },
+  "content_scripts": [{
+    "matches": ["https://wolfindrake.github.io/markets-briefing/*"],
+    "js": ["bridge.js"],
+    "run_at": "document_start"
+  }]
+}

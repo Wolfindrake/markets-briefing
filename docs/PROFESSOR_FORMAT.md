@@ -38,7 +38,7 @@ Source: his sheets posted on Blackboard (Market Briefings folder): 21, 22, 23, 2
 - Table, colours, bp conventions, one page: `pipeline/sheet.py`.
 - Performance bullets with "today and on the week" and YTD, regional lead words: `pipeline/narrative.py::sheet_text`.
 - Overview from the reaction-map read of the day and the biggest data surprise; highlights from actual vs consensus
-  (economic calendar) then the session's headlines (FT, Bloomberg, MarketWatch, CNBC).
+  (economic calendar) then the session's headlines (Bloomberg, FT).
 - With an AI key the commentary is written in his house style (rules above are in the prompt).
 - Week ahead from the economic calendar, grouped per day like his: `pipeline/calendar.py::sheet_rows`.
 - Differences you should know: our numbers are the US **close** (refresh 23:30 Madrid), his are a ~22:00 CET intraday

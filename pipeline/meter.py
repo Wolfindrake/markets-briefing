@@ -117,7 +117,7 @@ def build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date,
     if rsp and rsp.get("chg_pct") is not None:
         add("Breadth (average stock)", rsp["chg_pct"] / 1.5, 0.5, f"Equal-weight S&P {rsp['chg_pct']:+.1f}%")
     if sent and (sent.get("positive") or sent.get("negative")):
-        add("News sentiment (FT, Bloomberg, CNBC…)", sent["score"] * 1.5, 1.5,
+        add("News sentiment (Bloomberg, FT)", sent["score"] * 1.5, 1.5,
             f"{sent['positive']} positive vs {sent['negative']} negative session headlines")
     infl = bool((macro_ or {}).get("cpiYoy") and macro_["cpiYoy"] > 3)
     sv = {"dovish": 0.8, "hawkish": -0.8, "growth_pos": (-0.2 if infl else 0.4), "growth_neg": -0.3, "inline": 0.0}

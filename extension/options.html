@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>MB Sync – Options</title>
+<style>
+  :root { color-scheme: light dark; --bg:#0f1420; --card:#161d2c; --ink:#eef1f6; --muted:#9aa4b5; --gold:#d6b46a; --line:#263044; --up:#3fbf8a; --down:#e5675f; }
+  body { margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:620px; margin:32px auto; padding:0 16px; }
+  h1 { font-size:20px; margin:0 0 4px; } p { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; margin:10px 0 4px; } small { color:var(--muted); display:block; }
+  input[type=text], input[type=password] { width:100%; box-sizing:border-box; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:#0b1019; color:var(--ink); font:inherit; }
+  .row { display:flex; gap:8px; margin-top:14px; } button { padding:9px 14px; border:0; border-radius:8px; font-weight:700; cursor:pointer; }
+  .pri { background:var(--gold); color:#1a1408; } .sec { background:#243047; color:var(--ink); }
+  #msg { margin-top:10px; min-height:20px; } .ok { color:var(--up); } .bad { color:var(--down); }
+  ol { margin:6px 0 0 18px; padding:0; color:var(--muted); } a { color:var(--gold); }
+</style></head>
+<body><main>
+  <h1>Investing.com → Markets Briefing</h1>
+  <p>One-time setup. Your Investing.com login stays in Chrome; this page only needs a GitHub token so the extension can save the watchlist file to your repo.</p>
+
+  <div class="card">
+    <label for="token">GitHub token</label>
+    <input id="token" type="password" autocomplete="off" placeholder="github_pat_…">
+    <small>Make one yourself (it stays on this computer, in this extension only):</small>
+    <ol>
+      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Fine-grained tokens → Generate new token</a>.</li>
+      <li>Repository access: <b>Only select repositories</b> → <b>markets-briefing</b>.</li>
+      <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Nothing else.</li>
+      <li>Generate, copy, paste it above, Save.</li>
+    </ol>
+
+    <label for="repo">Repository</label>
+    <input id="repo" type="text" placeholder="Wolfindrake/markets-briefing">
+
+    <label for="url">Watchlist page</label>
+    <input id="url" type="text" placeholder="https://www.investing.com/portfolio/">
+    <small>Leave as is unless you keep several watchlists; then paste the address of the professor's one.</small>
+
+    <label><input id="close" type="checkbox"> Close the Investing.com tab after syncing (if the extension opened it)</label>
+
+    <label>Headlines (titles and links only; article text is never copied)</label>
+    <label style="font-weight:400"><input id="nb" type="checkbox"> Bloomberg – bloomberg.com/markets</label>
+    <label style="font-weight:400;margin-top:0"><input id="nf" type="checkbox"> Financial Times – ft.com/markets</label>
+
+    <div class="row"><button class="pri" id="save">Save</button><button class="sec" id="test">Test GitHub connection</button></div>
+    <div id="msg"></div>
+  </div>
+</main><script src="options.js"></script></body></html>

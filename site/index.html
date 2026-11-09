@@ -22,23 +22,16 @@
 <header class="masthead">
   <div class="wrap mast-row">
     <div class="brand"><span class="logo" aria-hidden="true">MB</span><div><b id="siteTitle">Markets Briefing</b><small id="siteSub">Global markets, explained daily</small></div></div>
-    <div class="mast-right">
-      <div class="when" role="group" aria-label="Show today or yesterday">
-        <button data-when="today" class="on">Today</button><button data-when="yesterday">Yesterday</button>
-      </div>
-      <span class="fresh" id="fresh">Loading…</span>
+    <div class="mast-actions">
       <button class="btn listen-btn" id="listenBtn" type="button" aria-label="Listen to today's briefing">▶ Listen</button>
-      <details class="upd" id="upd" hidden>
-        <summary class="btn primary">↻ Update</summary>
-        <div class="upd-menu">
-          <a id="updRun" target="_blank" rel="noopener"><b>Refresh now</b><small>GitHub › Run workflow (2–4 min)</small></a>
-          <a id="updEdit" target="_blank" rel="noopener"><b>Edit calendar, actuals &amp; my call</b><small>content/briefing.yaml</small></a>
-          <a id="updInv" target="_blank" rel="noopener"><b>My Investing.com watchlist</b><small>open it, then Export → CSV</small></a>
-          <a id="updCsv" target="_blank" rel="noopener"><b>Upload Investing.com CSV</b><small>drop the exported file here</small></a>
-          <a id="updLog" target="_blank" rel="noopener"><b>See run history</b><small>check a refresh worked</small></a>
-        </div>
-      </details>
+      <button class="btn refresh-btn" id="refreshBtn" type="button" aria-label="Refresh data"><span class="ri" aria-hidden="true">↻</span><span class="rl">Refresh</span></button>
     </div>
+  </div>
+  <div class="wrap mast-sub">
+    <div class="when" role="group" aria-label="Show today or yesterday">
+      <button data-when="today" class="on">Today</button><button data-when="yesterday">Yesterday</button>
+    </div>
+    <span class="fresh" id="fresh">Loading…</span>
   </div>
   <nav class="wrap nav" aria-label="Sections">
     <button data-page="markets" class="on">Markets</button>
@@ -53,19 +46,20 @@
 </header>
 
 <main id="main" class="wrap">
-  <div class="riskstrip" id="riskstrip" aria-label="Risk dashboard"></div>
-  <div id="checks" class="alert" hidden></div>
+  <div id="checks" hidden></div>
 
   <!-- ===================== MARKETS ===================== -->
   <section class="page" id="page-markets">
+    <div class="riskstrip" id="riskstrip" aria-label="Risk dashboard"></div>
     <article class="card listen-card" id="listenCard" hidden>
       <div class="card-head"><h2>Your 1-minute briefing</h2><span class="muted" id="listenMeta"></span></div>
       <div class="lc-row"><button class="btn primary" id="listenPlay" type="button">▶ Listen</button>
         <span class="muted">What changed and why, read aloud. Tap any sentence to jump to it.</span></div>
-      <div class="lc-text" id="listenText"></div>
+      <div class="lc-text clamp" id="listenText"></div>
+      <button class="linkbtn" id="listenMore" type="button">Read all</button>
     </article>
     <div class="section-head"><h2 id="heroTitle">Today in one look</h2><span class="muted" id="heroAsOf"></span></div>
-    <div class="hero" id="hero"></div>
+    <div class="hero" id="hero"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
 
     <div class="layout">
       <div class="col-main">
@@ -142,11 +136,11 @@
   <section class="page" id="page-macro" hidden>
     <div class="grid2">
       <article class="card"><h2>Fed meeting odds</h2><div id="fedOdds"></div><p class="hint">From 30-day fed funds futures, the same method as CME FedWatch.</p></article>
-      <article class="card"><h2>News mood</h2><div id="mood"></div><p class="hint">Finance word lists applied to the session's headlines (FT, Bloomberg, MarketWatch, CNBC).</p></article>
+      <article class="card"><h2>News mood</h2><div id="mood"></div><p class="hint">Finance word lists applied to the session's headlines (Bloomberg, FT).</p></article>
     </div>
     <div class="grid2">
-      <article class="card"><h2>Where are we in the cycle?</h2><div id="cycle"></div></article>
-      <article class="card"><h2>Is policy really tight?</h2><div id="realRate"></div></article>
+      <article class="card" id="cycleCard"><h2>Where are we in the cycle?</h2><div id="cycle"></div></article>
+      <article class="card" id="realCard"><h2>Is policy really tight?</h2><div id="realRate"></div></article>
     </div>
     <article class="card"><div class="card-head"><h2>Macro dashboard</h2><span class="muted" id="macroAsOf"></span></div>
       <div class="tscroll"><table class="plain" id="macroTable"></table></div>
@@ -185,8 +179,8 @@
       <ul class="bullets" id="tiBullets"></ul><p id="tiSummary"></p></article>
     <div id="tiMoves"></div>
     <div class="grid2">
-      <article class="card"><h2>Looking ahead</h2><div id="tiForward"></div></article>
-      <article class="card"><h2>Scenarios</h2><div id="tiScenarios"></div></article>
+      <article class="card" id="tiFwdCard"><h2>Looking ahead</h2><div id="tiForward"></div></article>
+      <article class="card" id="tiScnCard"><h2>Scenarios</h2><div id="tiScenarios"></div></article>
     </div>
     <article class="card"><h2>Sources</h2><ul class="srcs" id="tiSources"></ul><p class="hint" id="tiDisclaimer"></p></article>
   </section>
@@ -227,6 +221,30 @@
   <button class="pbtn small" id="pStop" type="button" aria-label="Stop">■</button>
 </div>
 
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<nav class="tabbar" aria-label="Sections (mobile)">
+  <button data-go="markets" class="on"><span aria-hidden="true">◉</span>Markets</button>
+  <button data-go="macro"><span aria-hidden="true">◈</span>Macro</button>
+  <button data-go="listen" class="tb-listen"><span aria-hidden="true">▶</span>Listen</button>
+  <button data-go="lof"><span aria-hidden="true">◐</span>Meter</button>
+  <button data-go="sheet"><span aria-hidden="true">▤</span>Sheet</button>
+</nav>
+
+<div class="modal" id="manageModal" hidden role="dialog" aria-modal="true" aria-labelledby="manageTitle">
+  <div class="modal-box manage-box">
+    <div class="card-head"><h2 id="manageTitle">Manage data</h2><button class="x" id="manageClose" aria-label="Close">×</button></div>
+    <p class="muted">Owner tools. These open GitHub or Investing.com in a new tab.</p>
+    <div class="manage-list">
+      <a id="mInv" target="_blank" rel="noopener"><b>1. Export your Investing.com watchlist</b><small>Opens your watchlist: Export → CSV</small></a>
+      <a id="mCsv" target="_blank" rel="noopener"><b>2. Upload the CSV</b><small>Fills MSCI Europe/EM, France 10Y and CDS with your exact numbers</small></a>
+      <a id="mEdit" target="_blank" rel="noopener"><b>Edit calendar, actuals and my Lords of Finance call</b><small>content/briefing.yaml</small></a>
+      <a id="mRun" target="_blank" rel="noopener"><b>Start a refresh on GitHub</b><small>Run workflow, for when one-tap Refresh isn't set up</small></a>
+      <a id="mLog" target="_blank" rel="noopener"><b>Run history</b><small>Check that the last refresh worked</small></a>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="chartModal" hidden role="dialog" aria-modal="true" aria-labelledby="chartTitle">
   <div class="modal-box">
     <div class="card-head"><h2 id="chartTitle">Chart</h2><button class="x" id="chartClose" aria-label="Close">×</button></div>
@@ -236,7 +254,7 @@
   </div>
 </div>
 
-<footer class="wrap foot"><p>Data: Yahoo Finance, US Treasury, Deutsche Bundesbank, Japan Ministry of Finance, FRED and your Investing.com export. News headlines link to their publishers. For education only, not investment advice.</p></footer>
+<footer class="wrap foot"><p><button class="linkbtn" id="manageBtn" type="button">Manage data</button> · Data: Yahoo Finance, US Treasury, Deutsche Bundesbank, Japan Ministry of Finance, FRED and your Investing.com export. News headlines link to their publishers. For education only, not investment advice.</p></footer>
 
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <script src="app.js"></script>

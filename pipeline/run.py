@@ -73,7 +73,9 @@ def build_rows(insts, cfg, offline: bool):
         auto = row_from_series(inst, fetched[k], inst["source"]) if fetched.get(k) else None
         auto_date = auto["date"] if auto else ""
         row = None
-        if k in csv_vals and (csv_vals[k].get("date") or csv_date) >= auto_date:
+        cdate = (csv_vals.get(k) or {}).get("date") or csv_date or ""
+        if k in csv_vals and cdate >= auto_date and not (auto and cdate == auto_date and
+                                                          importers.stale_intraday(csv_vals[k].get("taken"), cdate)):
             row = row_from_values(inst, csv_vals[k], "investing_csv", csv_date)
         elif auto:
             row = auto
@@ -162,6 +164,7 @@ def main(argv=None):
     since = datetime(md_.year, md_.month, md_.day, tzinfo=ny).astimezone(ZoneInfo("UTC"))
     until = datetime(nxt.year, nxt.month, nxt.day, 9, 30, tzinfo=ny).astimezone(ZoneInfo("UTC"))
     heads = [] if args.offline else news.fetch(feeds, since=since, until=until, session_date=market_date)
+    heads = news.merge(heads, news.from_imports(IMPORTS_DIR, since, until, market_date))   # + Chrome-extension headlines
     text = narrative.auto(rows, market_date, as_of, heads, upcoming, tape_, surprises_)
     if not args.offline:
         text = narrative.merge(text, narrative.ai(rows, market_date, heads, upcoming, cfg, tape_, surprises_, macro_),

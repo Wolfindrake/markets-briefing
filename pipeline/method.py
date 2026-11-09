@@ -294,12 +294,12 @@ def risk_strip(rows, fed=None) -> list[dict]:
             "Expected Treasury volatility: below 80 calm, above 120 stressed.")
     if R.get("us10") and R.get("us2"):
         c = (R["us10"]["last"] - R["us2"]["last"]) * 100
-        add("Yield curve 2s10s", f"{c:+.0f} bp", "stressed" if c < 0 else "normal" if c < 50 else "calm",
+        add("Curve 2s10s", f"{c:+.0f} bp", "stressed" if c < 0 else "normal" if c < 50 else "calm",
             "Negative (inverted) has preceded past recessions; steep is normal.")
     h, i = R.get("hyg"), R.get("ief")
     if h and i and h.get("chg_pct") is not None and i.get("chg_pct") is not None:
         d = h["chg_pct"] - i["chg_pct"]
-        add("Credit (junk vs Treasuries)", f"{d:+.2f} pp", "stressed" if d < -0.5 else "normal" if d < 0.2 else "calm",
+        add("Credit (HY vs Tsy)", f"{d:+.2f} pp", "stressed" if d < -0.5 else "normal" if d < 0.2 else "calm",
             "High-yield bonds (HYG) vs Treasuries (IEF) today: junk lagging means credit stress.")
     if R.get("fr10") and R.get("de10"):
         sp = (R["fr10"]["last"] - R["de10"]["last"]) * 100
@@ -307,7 +307,7 @@ def risk_strip(rows, fed=None) -> list[dict]:
             "France minus Germany 10-year spread: above 90 bp is crisis territory.")
     if fed:
         k = fed["hike"] if fed["hike"] >= fed["cut"] else fed["cut"]
-        add("Fed (next meeting)", f"{k}% {'hike' if fed['hike'] >= fed['cut'] else 'cut'}", "stressed" if fed["hike"] >= 50 else "normal",
+        add("Fed next meeting", f"{k}% {'hike' if fed['hike'] >= fed['cut'] else 'cut'}", "stressed" if fed["hike"] >= 50 else "normal",
             fed["text"])
     d = R.get("dxy")
     if d and (d.get("perf") or {}).get("week") is not None:

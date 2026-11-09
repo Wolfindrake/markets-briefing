@@ -12,7 +12,7 @@ Sources & verification. Tap any market for its chart.
 Every weekday after the US close a GitHub Actions job:
 
 1. downloads prices and yields: Yahoo Finance, US Treasury, Deutsche Bundesbank, Japan Ministry of Finance;
-2. reads publishers' public news feeds (FT, Yahoo Finance, MarketWatch, CNBC): headline, summary, link;
+2. reads publishers' public news feeds (Bloomberg, FT) plus the same publishers' markets pages via the Chrome extension: headline and link;
 3. writes the commentary: an automatic summary of the numbers, or, with an AI key, the full "why it moved",
    plain-English cards and Trump Impact, built only from those numbers and linked headlines;
 4. rebuilds the website and the sheet, keeps its own price history, and publishes everything.
@@ -55,6 +55,8 @@ Everything you type goes in **one file: `content/briefing.yaml`** (edit on GitHu
 
 For the professor's exact numbers plus Brazil 50, MSCI World/Europe/EM, France 10Y and France CDS, also upload your
 Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site and sheet still update every day.
+Easier: install the Chrome extension in `extension/` (see its README). Then the site's **Update** button reads your
+logged-in Investing.com watchlist in your own Chrome and feeds it in automatically.
 
 **The method built in (M4S4, top-down):** a 7-indicator macro dashboard, real rates, the business-cycle phase,
 "markets trade the surprise", the market reaction map applied to each day ("Reading the tape"), market internals
@@ -70,12 +72,20 @@ Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site an
   conflict or CPI / FOMC / payrolls is due before the next close. Every call is logged in `data/history/meter.csv` and
   scored on the next session, so the page shows its real hit rate. Rule-based, for the class game, not advice.
 - **Fed meeting odds** (Macro & Data): from 30-day fed funds futures on Yahoo, the CME FedWatch arithmetic.
-- **News mood**: finance word lists applied to the session's FT, Bloomberg, MarketWatch and CNBC headlines.
+- **News mood**: finance word lists applied to the session's Bloomberg and FT headlines.
 - **Alerts**: big moves (S&P ±2%, VIX +20%, 10Y ±10 bp), a Strong meter reading, a large Fed-odds swing or a
   hawkish/dovish data surprise open a GitHub issue in the repo, and GitHub emails it to you.
   **Phone push (optional):** install the free ntfy app, subscribe to a long random topic name (e.g. `mb-7f3k9q2x`),
   and add that name as the repository secret `NTFY_TOPIC`. Alerts then arrive as phone notifications.
 - **Install as an app:** open the site on your phone, Share → Add to Home Screen (iPhone) or Install app (Android).
+
+## 2c. Refresh and Manage (viewer vs owner)
+
+- **Refresh** (top right) is for anyone viewing the site. It reloads the latest published data in place and says when
+  the next automatic update is. If you set up the optional free Cloudflare Worker (`worker/README.md`), the same button
+  starts a brand-new data run (about 3 minutes) and updates the page when it is done, without ever opening GitHub.
+- **Manage data** (link in the footer) holds the owner tools: export/upload your Investing.com CSV, edit the calendar
+  and your Lords of Finance call, start a run on GitHub, run history.
 
 ## 3. Where everything comes from
 
@@ -89,7 +99,7 @@ Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site an
 | GDP, jobs, CPI, core PCE, Fed and ECB rates, wages | FRED, Federal Reserve Bank of St. Louis (free, no key) |
 | S&P equal-weight (RSP), semiconductors (SOX), dollar index (DXY): dashboard only | Yahoo Finance |
 | Fed funds futures (meeting odds) | Yahoo Finance (ZQ contracts) |
-| News | Publishers' public RSS feeds (FT, Bloomberg, MarketWatch, CNBC): headline, summary and link only (`config/settings.yaml`) |
+| News | Bloomberg and FT only: public RSS feeds plus headlines read by the Chrome extension; headline and link only (`config/settings.yaml`) |
 
 **Why no FT/Bloomberg logins.** The job never signs in with your FT, Bloomberg or Investing.com password.
 Paid sites block automated logins (Bloomberg's robot check), their terms forbid automated access and republishing,

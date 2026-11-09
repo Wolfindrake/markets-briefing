@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>MB Sync</title>
+<style>
+  :root { color-scheme: light dark; --bg:#0f1420; --card:#161d2c; --ink:#eef1f6; --muted:#9aa4b5; --gold:#d6b46a; --up:#3fbf8a; --down:#e5675f; }
+  body { margin:0; width:300px; font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { padding:14px; }
+  h1 { font-size:14px; margin:0 0 2px; } .sub { color:var(--muted); font-size:12px; margin:0 0 12px; }
+  button { width:100%; padding:10px; border:0; border-radius:10px; background:var(--gold); color:#1a1408; font-weight:700; font-size:13px; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  .st { margin-top:10px; padding:10px; background:var(--card); border-radius:10px; min-height:18px; }
+  .st.done { border-left:3px solid var(--up); } .st.error, .st.login, .st.setup { border-left:3px solid var(--down); }
+  .when { color:var(--muted); font-size:11px; margin-top:4px; }
+  .links { display:flex; justify-content:space-between; margin-top:10px; font-size:12px; }
+  a { color:var(--gold); text-decoration:none; } a:hover { text-decoration:underline; }
+</style></head>
+<body><div class="wrap">
+  <h1>Investing.com → Markets Briefing</h1>
+  <p class="sub">Reads your watchlist in this browser and updates the site.</p>
+  <button id="sync">Sync now</button>
+  <div class="st" id="st">—</div>
+  <div class="links"><a href="#" id="site">Open site ↗</a><a href="#" id="opts">Options</a></div>
+</div><script src="popup.js"></script></body></html>

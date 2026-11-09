@@ -169,6 +169,50 @@ def test_fed_odds_arithmetic():
     post = (imp - pre * d / n) / ((n - d) / n)
     assert abs((post - pre) / 0.25 - 0.79) < 0.02   # ~79% odds of a December hike, as checked by hand
 
+def test_extension_csv_and_intraday_rule():
+    """The Chrome extension's CSV (Key column, Investing.com number formats, Taken time) imports cleanly,
+    and an intraday snapshot gives way to the close once that session has ended."""
+    from datetime import datetime
+    text = ('"Key","Name","Symbol","Last","Open","Prev.","Chg.","Chg. %","Daily","1 Week","1 Month","YTD","1 Year","3 Years","Time","Taken"\n'
+            '"spx","S&P 500","US500","7,376.86","7,377.65","7,376.92","+23.13","+0.31%","0.31%","-2.18%","-5.56%","7.76%","7.97%","67.08%","06/11","2026-11-09T01:58:00.000Z"\n'
+            '"us10","U.S. 10Y","US10YT","4.874","4.851","4.856","+0.018","+0.37%","0.37%","-0.41%","-7.06%","17.36%","18.59%","4.91%","19:58","2026-11-09T01:58:00.000Z"\n')
+    with tempfile.TemporaryDirectory() as tmp:
+        f = Path(tmp) / "investing_watchlist_2026-11-06.csv"
+        f.write_text(text)
+        vals, d = importers.read_values(f, [{**IDX, "aliases": []}, {**YLD, "aliases": []}])
+    assert d == "2026-11-06" and vals["spx"]["last"] == 7376.86 and vals["spx"]["taken"].startswith("2026-11-09")
+    y = row_from_values(YLD, vals["us10"], "investing_csv", d)
+    assert abs(y["chg"] - 0.018) < 1e-9 and y["perf"]["week"] < 0          # yields: % performance turned into bp
+    t = datetime.fromisoformat
+    assert importers.stale_intraday("2026-11-10T18:00:00Z", "2026-11-10", t("2026-11-10T22:40:00+00:00"))
+    assert not importers.stale_intraday("2026-11-10T18:00:00Z", "2026-11-10", t("2026-11-10T18:05:00+00:00"))
+    assert not importers.stale_intraday("2026-11-10T22:00:00Z", "2026-11-10", t("2026-11-10T22:40:00+00:00"))
+
+
+def test_extension_headlines():
+    """Headlines saved by the extension: trusted links only, dated, windowed to the session, merged without duplicates."""
+    import json
+    from datetime import datetime, timezone
+    from pipeline import news
+    data = {"taken": "2026-11-09T01:58:00Z", "items": [
+        {"headline": "Treasury Rally Gets New Boost as Election Hammers the AI Trade", "source": "Bloomberg",
+         "url": "https://www.bloomberg.com/news/articles/2026-11-08/treasury-rally", "date": "2026-11-08"},
+        {"headline": "Old story from last week that should be dropped", "source": "Bloomberg",
+         "url": "https://www.bloomberg.com/news/articles/2026-11-02/old", "date": "2026-11-02"},
+        {"headline": "US stocks stage tepid recovery after rout fuelled by AI fears", "source": "Financial Times",
+         "url": "https://www.ft.com/content/abc", "date": None},
+        {"headline": "A link to somewhere that is not a trusted source at all", "source": "x", "url": "https://example.com/a"}]}
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "news_2026-11-06.json").write_text(json.dumps(data))
+        since = datetime(2026, 11, 6, 5, tzinfo=timezone.utc)
+        until = datetime(2026, 11, 9, 14, 30, tzinfo=timezone.utc)
+        got = news.from_imports(tmp, since, until, "2026-11-06")
+    assert [g["source"] for g in got] == ["Bloomberg", "Financial Times"]
+    rss = [{"headline": got[1]["headline"], "url": "https://www.ft.com/content/abc?x=1", "source": "Financial Times",
+            "ts": "2026-11-08T00:00:00+00:00", "session": False}]
+    assert len(news.merge(rss, got)) == 2      # same FT story from RSS and the page counted once
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

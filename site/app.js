@@ -51,13 +51,8 @@
     f.append(el("span", "dot " + cls), "Market close " + mdTxt + " · refreshed " + fmtTime(D.updatedAt));
     if (cc.total) { var b = el("a", "ccbadge " + (cc.passed === cc.total ? "ok" : "warn"), (cc.passed === cc.total ? "✓ " : "! ") + cc.passed + "/" + cc.total + " checks"); b.href = "#sourcesCard"; b.addEventListener("click", function () { var m = document.querySelector('.nav button[data-page="markets"]'); if (m) m.click(); setTimeout(function () { $("#sourcesCard").scrollIntoView({ behavior: "smooth" }); }, 50); }); f.append(" ", b); }
   }
-  function renderChecks() {
-    var box = $("#checks"); var u = (D.verification && D.verification.unverifiedItems) || [];
-    if (!u.length) { box.hidden = true; return; }
-    box.hidden = false; clear(box);
-    var d = el("details"); d.append(el("summary", null, u.length + " data check" + (u.length > 1 ? "s" : "") + " — tap to see"));
-    var ul = el("ul"); u.forEach(function (x) { ul.append(el("li", null, x)); }); d.append(ul); box.append(d);
-  }
+  function renderChecks() { $("#checks").hidden = true; }   // flags now live in "Sources & verification"
+
 
   // ------------------------------------------------------------------ markets page
   function renderHero() {
@@ -73,7 +68,7 @@
     });
   }
   var COLS = { symbol: "Symbol", last: "Last", open: "Open", prev: "Prev.", chg: "Chg.", chgPct: "Chg. %", daily: "Daily", week: "1W", month: "1M", ytd: "YTD", year: "1Y", y3: "3Y" };
-  var SHOW = ["last", "chg", "chgPct", "week", "month", "ytd", "year", "y3", "open", "prev"];
+  var SHOW = ["last", "chg", "chgPct", "week", "month", "ytd", "year", "y3"];
   function renderMarket() {
     var snap = D.snapshots[snapKey()];
     var t = clear($("#mktTable"));
@@ -88,6 +83,8 @@
       var sm = el("small", null, r[idx.symbol]); var lk = (D.links || {})[r[0]];
       if (lk && /^https:\/\/www\.investing\.com\//.test(lk)) { var a = el("a", "inv", "Investing ↗"); a.href = lk; a.target = "_blank"; a.rel = "noopener"; a.title = "Open on Investing.com"; a.addEventListener("click", function (e) { e.stopPropagation(); }); sm.append(" · ", a); }
       nm.append(sm);
+      var hk = NAME_TO_KEY[r[0]], hp = hk && D.history && D.history[hk] ? (D.history[hk].points || []).slice(-22) : [];
+      if (hp.length > 2) { var spk = spark(hp.map(function (p) { return p[1]; })); spk.setAttribute("class", "rowspark"); spk.setAttribute("aria-hidden", "true"); nm.append(spk); }
       tr.append(nm);
       SHOW.forEach(function (c) {
         var v = r[idx[c]];
@@ -138,6 +135,8 @@
   function renderSources() {
     var v = D.verification || {}; var box = clear($("#verify"));
     box.append(el("p", null, v.note || ""));
+    var flags = (v.unverifiedItems || []);
+    if (flags.length) { var dd = el("details", "flags"); dd.append(el("summary", null, flags.length + " data flag" + (flags.length > 1 ? "s" : "") + " (stale, missing or unusually large moves)")); var fu = el("ul"); flags.forEach(function (x) { fu.append(el("li", null, x)); }); dd.append(fu); box.append(dd); }
     var cc = D.crosscheck || {};
     if ((cc.items || []).length) {
       box.append(el("p", "cc-score", "Cross-checks: " + cc.passed + " of " + cc.total + " passed"));
@@ -263,9 +262,9 @@
       mv.append(c);
     });
     var f = clear($("#tiForward")); (t.forwardLook || []).forEach(function (x) { var d = el("div", "fwd"); d.append(el("b", null, (x.date ? x.date + " — " : "") + x.title), x.text || ""); f.append(d); });
-    if (!(t.forwardLook || []).length) f.append(el("p", "muted", "—"));
+    $("#tiFwdCard").hidden = !(t.forwardLook || []).length;
     var sc = clear($("#tiScenarios")); (t.scenarios || []).forEach(function (x) { var d = el("div", "fwd"); d.append(el("b", null, x.label), x.text || ""); sc.append(d); });
-    if (!(t.scenarios || []).length) sc.append(el("p", "muted", "—"));
+    $("#tiScnCard").hidden = !(t.scenarios || []).length; $("#tiFwdCard").parentNode.hidden = $("#tiFwdCard").hidden && $("#tiScnCard").hidden;
     var so = clear($("#tiSources")); (t.sources || []).forEach(function (x) { var li = el("li"); li.append(link(x.url, x.name)); so.append(li); });
     $("#tiDisclaimer").textContent = t.disclaimer || "";
   }
@@ -315,11 +314,13 @@
   function renderInternals() {
     var ul = clear($("#internals")); var xs = (D.reading || {}).internals || [];
     if (!xs.length) { ul.append(el("li", "muted", "—")); return; }
-    xs.forEach(function (x) { var li = el("li"); li.append(el("b", null, x.label + ": " + x.value)); if (x.note) li.append(el("small", null, x.note)); ul.append(li); });
+    xs.forEach(function (x) { var li = el("li"); li.append(el("span", "il", x.label), el("b", null, x.value)); if (x.note) li.append(el("small", null, x.note)); ul.append(li); });
   }
   function renderMacro() {
     var M = D.macro || {};
     var cy = clear($("#cycle"));
+    $("#cycleCard").hidden = !M.cycle; $("#realCard").hidden = !M.realRate;
+    $("#cycleCard").parentNode.hidden = !M.cycle && !M.realRate;
     if (M.cycle) { cy.append(el("p", "phase", M.cycle.phase), el("p", null, M.cycle.text), el("p", "muted", "Rule of thumb from: " + M.cycle.inputs.join(" · "))); }
     else cy.append(el("p", "muted", "Needs FRED data (filled in on the daily run)."));
     var rr = clear($("#realRate")); var r = M.realRate;
@@ -385,17 +386,93 @@
     var repo = location.pathname.split("/").filter(Boolean)[0] || (m[1] + ".github.io");
     return "https://github.com/" + m[1] + "/" + repo;
   }
-  function renderUpdate() {
-    var r = repoUrl(); if (!r) return;
-    $("#updRun").href = r + "/actions/workflows/daily.yml";
-    $("#updEdit").href = r + "/edit/main/content/briefing.yaml";
-    $("#updCsv").href = r + "/upload/main/data/imports";
-    $("#updLog").href = r + "/actions";
-    var inv = (D.site && D.site.investing_watchlist) || "https://www.investing.com/portfolio/";
-    $("#updInv").href = /^https:\/\/www\.investing\.com\//.test(inv) ? inv : "https://www.investing.com/portfolio/";
-    $("#upd").hidden = false;
+  function toast(msg, ms) {
+    var t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h);
+    toast.h = setTimeout(function () { t.hidden = true; }, ms || 6000);
   }
-  document.addEventListener("click", function (e) { var u = $("#upd"); if (u && u.open && !u.contains(e.target)) u.open = false; });
+  function nextAuto() {   // weekdays 22:30 UTC
+    var d = new Date(); var n = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 22, 30));
+    while (n <= d || n.getUTCDay() === 0 || n.getUTCDay() === 6) n = new Date(n.getTime() + 864e5);
+    return n.toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  }
+  function reloadData(quiet) {
+    var btn = $("#refreshBtn"); btn.classList.add("spin");
+    return fetch("data/dashboard.json?v=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      btn.classList.remove("spin");
+      if (!data) { toast("Couldn't reach the data. Check your connection."); return false; }
+      var newer = !D || data.updatedAt !== D.updatedAt; D = data; renderAll();
+      if (!quiet) toast(newer ? "Updated: market close " + D.marketDate + "." : "You have the latest data (market close " + D.marketDate + "). Next automatic update " + nextAuto() + ".");
+      return newer;
+    }).catch(function () { btn.classList.remove("spin"); toast("Couldn't reach the data. Check your connection."); return false; });
+  }
+  function remoteRefresh(ep) {
+    var btn = $("#refreshBtn"), pass = null;
+    try { pass = localStorage.getItem("mb-pass"); } catch (e) { /* ignore */ }
+    var send = function () {
+      return fetch(ep.replace(/\/$/, "") + "/refresh", { method: "POST", headers: pass ? { "X-Passcode": pass } : {} }).then(function (r) { return r.json().then(function (j) { return [r.status, j]; }); });
+    };
+    btn.classList.add("spin"); btn.disabled = true;
+    send().then(function (res) {
+      if (res[0] === 401) {
+        pass = window.prompt("Refresh passcode:"); if (!pass) { btn.classList.remove("spin"); btn.disabled = false; return; }
+        try { localStorage.setItem("mb-pass", pass); } catch (e) { /* ignore */ }
+        return send().then(handle);
+      }
+      return handle(res);
+    }).catch(function () { btn.classList.remove("spin"); btn.disabled = false; reloadData(); });
+    function handle(res) {
+      var j = res[1] || {};
+      if (!j.started) { btn.classList.remove("spin"); btn.disabled = false; toast(j.reason === "already running" ? "A refresh is already running. It will appear in a few minutes." : j.reason ? "Not started: " + j.reason + "." : "Couldn't start a refresh."); if (j.reason && j.reason.indexOf("10 minutes") >= 0) reloadData(true); return; }
+      toast("Getting fresh market data. This takes about 3 minutes; you can keep reading.", 9000);
+      var t0 = Date.now(), poll = function () {
+        fetch(ep.replace(/\/$/, "") + "/status").then(function (r) { return r.json(); }).then(function (st) {
+          var run = st.run || {};
+          if (run.status === "completed" && Date.parse(run.created) >= t0 - 60000) {
+            setTimeout(function () { reloadData().then(function () { btn.classList.remove("spin"); btn.disabled = false; }); }, 45000);   // allow the site to publish
+          } else if (Date.now() - t0 < 9 * 60000) setTimeout(poll, 20000);
+          else { btn.classList.remove("spin"); btn.disabled = false; toast("Still running. Tap Refresh again in a minute."); }
+        }).catch(function () { setTimeout(poll, 20000); });
+      };
+      setTimeout(poll, 30000);
+    }
+  }
+  // With the "Markets Briefing – Investing.com sync" Chrome extension installed, Update reads your Investing.com
+  // watchlist in this browser, saves it to the repo, and the page reloads itself when the rebuilt site is live.
+  function hasExt() { return document.documentElement.dataset.mbExt === "ready"; }
+  var extWait = null;
+  function extSync() {
+    var btn = $("#refreshBtn"); btn.classList.add("spin"); btn.disabled = true;
+    toast("Reading your Investing.com watchlist…", 20000);
+    window.postMessage({ source: "mb-site", type: "sync" }, location.origin);
+  }
+  window.addEventListener("message", function (e) {
+    if (e.source !== window || !e.data || e.data.source !== "mb-ext") return;
+    var m = e.data, btn = $("#refreshBtn"), stop = function () { btn.classList.remove("spin"); btn.disabled = false; };
+    if (m.state === "reading" || m.state === "saving") { toast(m.text, 20000); return; }
+    if (m.state !== "done") { stop(); toast(m.text, 12000); return; }
+    toast(m.text + " This page reloads by itself.", 15000);
+    var t0 = Date.now(); clearTimeout(extWait);
+    var poll = function () {
+      reloadData(true).then(function (newer) {
+        if (newer) { stop(); toast("Updated with your Investing.com snapshot (" + D.marketDate + ")."); }
+        else if (Date.now() - t0 < 10 * 60000) extWait = setTimeout(poll, 30000);
+        else { stop(); toast("The rebuild is taking longer than usual. Tap Update in a few minutes."); }
+      });
+    };
+    extWait = setTimeout(poll, 90000);
+  });
+  function renderUpdate() {
+    var ep = (D.site && D.site.refresh_endpoint) || "";
+    $("#refreshBtn").onclick = function () { if (hasExt()) extSync(); else if (/^https:\/\//.test(ep)) remoteRefresh(ep); else reloadData(); };
+    $("#refreshBtn").title = hasExt() ? "Sync your Investing.com watchlist and rebuild (about 3 minutes)" :
+      /^https:\/\//.test(ep) ? "Get fresh market data now (about 3 minutes)" : "Load the latest published data";
+    var r = repoUrl(), inv = (D.site && D.site.investing_watchlist) || "https://www.investing.com/portfolio/";
+    $("#mInv").href = /^https:\/\/www\.investing\.com\//.test(inv) ? inv : "https://www.investing.com/portfolio/";
+    if (r) { $("#mCsv").href = r + "/upload/main/data/imports"; $("#mEdit").href = r + "/edit/main/content/briefing.yaml"; $("#mRun").href = r + "/actions/workflows/daily.yml"; $("#mLog").href = r + "/actions"; }
+    $("#manageBtn").onclick = function () { $("#manageModal").hidden = false; };
+  }
+  $("#manageClose").addEventListener("click", function () { $("#manageModal").hidden = true; });
+  $("#manageModal").addEventListener("click", function (e) { if (e.target.id === "manageModal") $("#manageModal").hidden = true; });
 
 
   // ------------------------------------------------------------------ Long / Short meter
@@ -466,7 +543,14 @@
   function renderRisk() {
     var box = clear($("#riskstrip")); var xs = D.risk || [];
     box.hidden = !xs.length;
-    xs.forEach(function (x) { var c = el("div", "rk " + x.level); c.title = x.tip; c.append(el("small", null, x.label), el("b", null, x.value), el("span", "lvl", x.level)); box.append(c); });
+    // Columns follow the number of tiles, so 6 or 7 signals always sit in one even row (two even rows on a tablet).
+    box.style.setProperty("--n", xs.length || 1);
+    box.style.setProperty("--half", Math.ceil((xs.length || 1) / 2));
+    var SHORT = { "Credit (junk vs Treasuries)": "Credit (HY vs Tsy)", "Yield curve 2s10s": "Curve 2s10s", "Fed (next meeting)": "Fed next meeting" };
+    xs.forEach(function (x) {
+      var c = el("div", "rk " + x.level); c.title = x.label + " — " + x.tip;
+      c.append(el("small", null, SHORT[x.label] || x.label), el("b", null, x.value), el("span", "lvl", x.level)); box.append(c);
+    });
   }
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () { /* offline support is optional */ }); });
@@ -490,6 +574,7 @@
   function speakFrom(i) {
     var ss = sentences(); if (!ss.length || !("speechSynthesis" in window)) return;
     speechSynthesis.cancel(); TTS.i = i; TTS.playing = true; var token = TTS.token = (TTS.token || 0) + 1;
+    $("#listenText").classList.remove("clamp"); $("#listenMore").hidden = true;
     $("#player").hidden = false; $("#pToggle").textContent = "❚❚"; $("#pToggle").setAttribute("aria-label", "Pause");
     $("#listenBtn").textContent = "❚❚ Listening"; $("#listenPlay").textContent = "❚❚ Pause";
     if (!TTS.voice) TTS.voice = pickVoice();
@@ -514,6 +599,8 @@
     $("#listenMeta").textContent = "about " + Math.max(1, Math.round(L.seconds / 60)) + " min" + (L.ai ? " · AI-written" : "");
     var t = clear($("#listenText"));
     L.sentences.forEach(function (x, k) { var sp = el("span", null, x + " "); sp.tabIndex = 0; sp.addEventListener("click", function () { speakFrom(k); }); t.append(sp); });
+    $("#listenMore").hidden = false; $("#listenText").classList.add("clamp");
+    $("#listenMore").onclick = function () { var c = $("#listenText").classList.toggle("clamp"); this.textContent = c ? "Read all" : "Show less"; };
     if (!supported) { $("#listenBtn").hidden = true; $("#listenPlay").hidden = true; return; }
     var start = function () { if (TTS.playing) togglePause(); else speakFrom(0); };
     $("#listenBtn").onclick = function () { var m = document.querySelector('.nav button[data-page="markets"]'); if (m) m.click(); start(); };
@@ -572,10 +659,16 @@
   }
   bindTabs(".nav", "data-page", function (p) {
     S.page = p; document.querySelectorAll(".page").forEach(function (x) { x.hidden = x.id !== "page-" + p; });
+    document.querySelectorAll(".tabbar button[data-go]").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-go") === p); });
     try { localStorage.setItem("mb-page", p); } catch (e) { /* storage unavailable */ }
     window.scrollTo(0, 0);
   });
   bindTabs(".when", "data-when", function (w) { S.when = w; renderDay(); });
+  document.querySelectorAll(".tabbar button").forEach(function (b) { b.addEventListener("click", function () {
+    var go = b.getAttribute("data-go");
+    if (go === "listen") { var lb = $("#listenBtn"); if (lb && !lb.hidden) lb.click(); return; }
+    var t = document.querySelector('.nav button[data-page="' + go + '"]'); if (t) t.click();
+  }); });
   bindTabs("#mktTabs", "data-g", function (g) { S.group = g; renderMarket(); });
   bindTabs("#moverTabs", "data-m", function (m) { S.mover = m; renderMovers(); });
 

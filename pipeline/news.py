@@ -72,15 +72,57 @@ def fetch(feeds: list[dict], max_age_hours: int = 36, limit: int = 40, since=Non
                               "session": bool(session_date and when and when.astimezone(NY).date().isoformat() == session_date)})
         except Exception as exc:  # noqa: BLE001
             log.warning("feed failed %s: %s", url, exc)
-    seen, out = set(), []
-    for it in sorted(items, key=lambda x: (x.get("session", False), x["ts"]), reverse=True):
-        k = re.sub(r"\W+", "", it["headline"].lower())[:80]
-        if k in seen:
-            continue
-        seen.add(k)
-        out.append(it)
+    out = merge(items, limit=limit)
     log.info("news: %d headlines from %d feeds", len(out), len(feeds or []))
+    return out
+
+
+def merge(*lists, limit: int = 40) -> list[dict]:
+    """Combine headline lists, drop duplicates (same headline or same link), session headlines first, newest first."""
+    seen, out = set(), []
+    allitems = [i for lst in lists for i in (lst or [])]
+    for it in sorted(allitems, key=lambda x: (x.get("session", False), x["ts"]), reverse=True):
+        k = re.sub(r"\W+", "", it["headline"].lower())[:80]
+        u = it["url"].split("?")[0].rstrip("/")
+        if k in seen or u in seen:
+            continue
+        seen.update({k, u})
+        out.append(it)
     return out[:limit]
+
+
+def from_imports(folder, since=None, until=None, session_date: str | None = None) -> list[dict]:
+    """Headlines saved by the Chrome extension (data/imports/news_<date>.json): headline + link (+ date) read from
+    the Bloomberg and FT markets pages in your own browser. Only titles and links, never article text."""
+    import json
+    from pathlib import Path
+    files = sorted(Path(folder).glob("news_*.json"))
+    if not files:
+        return []
+    try:
+        data = json.loads(files[-1].read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log.warning("extension headlines unreadable %s: %s", files[-1].name, exc)
+        return []
+    taken = _date(data.get("taken", "")) or datetime.now(timezone.utc)
+    out = []
+    for it in data.get("items", []):
+        title, url = _text(it.get("headline", ""), 220), str(it.get("url", ""))
+        if not title or not re.match(r"^https://www\.(bloomberg\.com|ft\.com)/", url):
+            continue
+        when = taken
+        if it.get("date"):
+            try:
+                when = datetime.fromisoformat(it["date"] + "T12:00:00+00:00")
+            except ValueError:
+                pass
+        if since is not None and (when < since or (until is not None and when > until)):
+            continue
+        out.append({"headline": title, "url": url, "source": it.get("source", ""), "dateISO": when.date().isoformat(),
+                    "ts": when.isoformat(), "blurb": "", "via": "browser",
+                    "session": bool(session_date and when.astimezone(NY).date().isoformat() == session_date)})
+    log.info("news: %d headlines from the browser extension (%s)", len(out), files[-1].name)
+    return out
 
 
 def about(items: list[dict], words: list[str], n: int = 6) -> list[dict]:

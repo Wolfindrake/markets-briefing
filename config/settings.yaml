@@ -5,6 +5,7 @@ site:
   subtitle: "Daily cross-asset dashboard and one-page briefing sheet"
   team_label: ""            # e.g. your team name, printed in the sheet footer if set
   repo_url: "https://github.com/Wolfindrake/markets-briefing"   # optional
+  refresh_endpoint: ""      # optional: your Cloudflare Worker URL (see worker/README) for a one-tap Refresh
   investing_watchlist: "https://www.investing.com/portfolio/"   # your Investing.com watchlist (opens from the Update menu), e.g. https://github.com/you/markets-briefing (found automatically on github.io)
 
 timezones:
@@ -33,9 +34,8 @@ news:
     - {source: "Bloomberg", url: "https://feeds.bloomberg.com/economics/news.rss"}
     - {source: "Financial Times", url: "https://www.ft.com/markets?format=rss"}
     - {source: "Financial Times", url: "https://www.ft.com/world?format=rss"}
-    - {source: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
-    - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"}
-    - {source: "CNBC", url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"}
+    # Trusted sources only (Bloomberg, Financial Times). The Chrome extension adds more headlines from the same two
+    # publishers' markets pages, read in your own logged-in browser (titles and links only).
 
 # AI commentary (why markets moved, plain-English cards, Trump Impact, sheet text).
 # Used automatically when an ANTHROPIC_API_KEY repository secret exists; otherwise the site shows an

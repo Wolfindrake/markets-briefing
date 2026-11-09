@@ -31,6 +31,7 @@ COLS = {
     "ytd": ["ytd"],
     "year": ["1 year", "yearly", "1y"],
     "y3": ["3 years", "3y", "3 year"],
+    "taken": ["taken"],          # when the browser extension read the watchlist (ISO time, UTC)
 }
 NUMERIC = ["last", "open", "prev", "chg", "chg_pct", "daily", "week", "month", "ytd", "year", "y3"]
 
@@ -115,6 +116,23 @@ def _date_from_filename(path: Path):
     return datetime.fromtimestamp(path.stat().st_mtime).date().isoformat()
 
 
+def stale_intraday(taken: str | None, as_of: str, now: datetime | None = None) -> bool:
+    """True when a snapshot was taken DURING the New York session of `as_of` and that session has since closed:
+    the closing prices from the regular feeds are then better than the intraday snapshot."""
+    if not taken:
+        return False
+    try:
+        from zoneinfo import ZoneInfo
+        ny = ZoneInfo("America/New_York")
+        t = datetime.fromisoformat(taken.replace("Z", "+00:00")).astimezone(ny)
+        n = (now or datetime.now(tz=ny)).astimezone(ny)
+    except (ValueError, KeyError):
+        return False
+    before_close = t.date().isoformat() == as_of and (t.hour, t.minute) < (16, 10)
+    closed_since = n.date().isoformat() > as_of or (n.date().isoformat() == as_of and (n.hour, n.minute) >= (16, 10))
+    return before_close and closed_since
+
+
 def latest_investing_csv(folder: Path):
     files = sorted(folder.glob("*.csv"), key=lambda p: (_date_from_filename(p), p.stat().st_mtime))
     return files[-1] if files else None
@@ -139,6 +157,8 @@ def read_values(path: Path, instruments: list[dict]) -> tuple[dict, str]:
                 vals["date"] = datetime.fromisoformat(row["date"]).date().isoformat()
             except ValueError:
                 vals["date"] = None
+        if row.get("taken"):
+            vals["taken"] = row["taken"]
         out[inst["key"]] = vals
     if unmatched:
         log.warning("%s: rows not matched to any instrument (add an alias): %s", path.name, ", ".join(unmatched))
