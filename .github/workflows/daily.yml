@@ -85,6 +85,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh issue create --title "Market alert $(date -u +%Y-%m-%d)" --body-file alert.md || true
 
+      - name: Phone push (ntfy.sh, optional)
+        if: hashFiles('alert.md') != ''
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -s -H "Title: Markets Briefing alert" -H "Tags: chart_with_upwards_trend" -H "Click: https://wolfindrake.github.io/markets-briefing/" --data-binary @alert.md "https://ntfy.sh/$NTFY_TOPIC" || true
+          fi
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
