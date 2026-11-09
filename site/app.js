@@ -426,7 +426,10 @@
     var M = D.meter; if (!M) { $("#meterMini").hidden = true; return; }
     var cls = M.needle > 0.2 ? "up" : M.needle < -0.2 ? "down" : "flat";
     clear($("#gauge")).append(gaugeSVG(M.needle, false)); clear($("#gaugeMini")).append(gaugeSVG(M.needle, true));
-    var r = clear($("#meterRead")); r.append(el("div", "zone " + cls, M.zone), el("div", "conv", M.conviction + "% conviction"), el("p", "muted", M.note || ""));
+    var r = clear($("#meterRead")); r.append(el("div", "zone " + cls, M.zone), el("div", "conv", M.conviction + "% conviction"));
+    if (M.prob_up != null) r.append(el("div", "prob", "Chance the S&P closes higher next session: " + M.prob_up + "%"));
+    if (M.regime) { var rg = el("div", "regime " + String(M.regime.name).toLowerCase(), M.regime.name + " regime"); rg.title = M.regime.detail || ""; r.append(rg); }
+    r.append(el("p", "muted", M.note || ""));
     $("#meterMiniRead").textContent = M.zone + " · " + M.conviction + "% conviction";
     $("#meterHorizon").textContent = M.horizon || "";
     var f = clear($("#factors"));
@@ -438,7 +441,9 @@
       f.append(row);
     });
     var t = M.track || {};
-    $("#meterTrack").textContent = t.calls ? "Track record: right on " + t.hits + " of " + t.calls + " directional calls (" + t.rate + "%), scored on the next session's S&P close." : "Track record: builds up from today; each call is scored on the next session's S&P close.";
+    var tt = t.calls ? "Track record: right on " + t.hits + " of " + t.calls + " directional calls (" + t.rate + "%)." : "Track record: builds up from today; each call is scored on the next session's S&P close.";
+    if (t.brier != null) tt += " Brier score " + t.brier.toFixed(3) + " over " + t.scored + " sessions (coin flip = 0.250; lower is better" + (t.brier < 0.25 ? ", so the meter is adding value)." : ", so no edge yet: treat it as a discussion aid).");
+    $("#meterTrack").textContent = tt;
     $("#meterMini").onclick = function () { var b = document.querySelector('.nav button[data-page="lof"]'); if (b) b.click(); };
     $("#meterMini").onkeydown = function (e) { if (e.key === "Enter") this.onclick(); };
   }
@@ -457,6 +462,67 @@
     }
   }
 
+
+  function renderRisk() {
+    var box = clear($("#riskstrip")); var xs = D.risk || [];
+    box.hidden = !xs.length;
+    xs.forEach(function (x) { var c = el("div", "rk " + x.level); c.title = x.tip; c.append(el("small", null, x.label), el("b", null, x.value), el("span", "lvl", x.level)); box.append(c); });
+  }
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () { /* offline support is optional */ }); });
+  }
+
+
+  // ------------------------------------------------------------------ Listen: spoken briefing (browser text-to-speech)
+  var TTS = { i: 0, playing: false, rate: 1, voice: null };
+  function pickVoice() {
+    if (!("speechSynthesis" in window)) return null;
+    var vs = speechSynthesis.getVoices().filter(function (v) { return /^en(-|_)/i.test(v.lang); });
+    var pref = ["Google UK English Female", "Google US English", "Samantha", "Daniel", "Serena", "Karen", "Moira", "Microsoft Aria", "Microsoft Libby"];
+    for (var k = 0; k < pref.length; k++) { var f = vs.filter(function (v) { return v.name.indexOf(pref[k]) === 0; })[0]; if (f) return f; }
+    return vs.filter(function (v) { return /en-GB/i.test(v.lang); })[0] || vs[0] || null;
+  }
+  function sentences() { return ((D && D.listen) || {}).sentences || []; }
+  function markSentence() {
+    document.querySelectorAll("#listenText span").forEach(function (n, k) { n.classList.toggle("on", k === TTS.i && TTS.playing); });
+    $("#pProgress").textContent = (TTS.i + 1) + " of " + sentences().length;
+  }
+  function speakFrom(i) {
+    var ss = sentences(); if (!ss.length || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel(); TTS.i = i; TTS.playing = true; var token = TTS.token = (TTS.token || 0) + 1;
+    $("#player").hidden = false; $("#pToggle").textContent = "❚❚"; $("#pToggle").setAttribute("aria-label", "Pause");
+    $("#listenBtn").textContent = "❚❚ Listening"; $("#listenPlay").textContent = "❚❚ Pause";
+    if (!TTS.voice) TTS.voice = pickVoice();
+    var u = new SpeechSynthesisUtterance(ss[i]); u.rate = TTS.rate; u.lang = (TTS.voice && TTS.voice.lang) || "en-GB"; if (TTS.voice) u.voice = TTS.voice;
+    u.onend = function () { if (!TTS.playing || token !== TTS.token) return; if (TTS.i + 1 < ss.length) speakFrom(TTS.i + 1); else stopSpeech(); };
+    markSentence(); setTimeout(function () { if (token === TTS.token) speechSynthesis.speak(u); }, 60);   // Chrome drops a speak() right after cancel()
+  }
+  function stopSpeech() {
+    TTS.playing = false; TTS.token = (TTS.token || 0) + 1; if ("speechSynthesis" in window) speechSynthesis.cancel();
+    $("#player").hidden = true; $("#listenBtn").textContent = "▶ Listen"; $("#listenPlay").textContent = "▶ Listen"; markSentence();
+  }
+  function togglePause() {
+    if (!("speechSynthesis" in window)) return;
+    if (speechSynthesis.paused) { speechSynthesis.resume(); $("#pToggle").textContent = "❚❚"; $("#listenPlay").textContent = "❚❚ Pause"; }
+    else if (TTS.playing) { speechSynthesis.pause(); $("#pToggle").textContent = "▶"; $("#listenPlay").textContent = "▶ Resume"; }
+  }
+  function renderListen() {
+    var L = D.listen, card = $("#listenCard");
+    if (!L || !(L.sentences || []).length) { card.hidden = true; $("#listenBtn").hidden = true; return; }
+    card.hidden = false;
+    var supported = "speechSynthesis" in window;
+    $("#listenMeta").textContent = "about " + Math.max(1, Math.round(L.seconds / 60)) + " min" + (L.ai ? " · AI-written" : "");
+    var t = clear($("#listenText"));
+    L.sentences.forEach(function (x, k) { var sp = el("span", null, x + " "); sp.tabIndex = 0; sp.addEventListener("click", function () { speakFrom(k); }); t.append(sp); });
+    if (!supported) { $("#listenBtn").hidden = true; $("#listenPlay").hidden = true; return; }
+    var start = function () { if (TTS.playing) togglePause(); else speakFrom(0); };
+    $("#listenBtn").onclick = function () { var m = document.querySelector('.nav button[data-page="markets"]'); if (m) m.click(); start(); };
+    $("#listenPlay").onclick = start;
+    $("#pToggle").onclick = togglePause; $("#pStop").onclick = stopSpeech;
+    $("#pSpeed").onclick = function () { TTS.rate = TTS.rate >= 1.5 ? 0.9 : Math.round((TTS.rate + 0.25) * 100) / 100; this.textContent = TTS.rate + "×"; if (TTS.playing) speakFrom(TTS.i); };
+    if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = function () { TTS.voice = pickVoice(); };
+  }
+
   // ------------------------------------------------------------------ chart modal
   function openChart(key) {
     if (!key || !D.history || !D.history[key]) return;
@@ -466,18 +532,25 @@
     var h = D.history[S.chartKey]; var pts = h.points || [];
     var cut = new Date(D.marketDate); cut.setDate(cut.getDate() - S.range);
     pts = pts.filter(function (p) { return new Date(p[0]) >= cut; });
-    $("#chartNote").textContent = pts.length < 2 ? "Not enough history yet; it builds up with every daily run." : pts.length + " daily closes, " + pts[0][0] + " to " + pts[pts.length - 1][0] + (h.unit === "yield" ? " (yield, %)" : "");
-    if (typeof Chart === "undefined") return;
-    var css = getComputedStyle(document.documentElement);
-    var up = pts.length > 1 && pts[pts.length - 1][1] >= pts[0][1];
-    if (chart) chart.destroy();
-    chart = new Chart($("#chart"), {
-      type: "line",
-      data: { labels: pts.map(function (p) { return p[0]; }), datasets: [{ data: pts.map(function (p) { return p[1]; }), borderColor: up ? css.getPropertyValue("--up").trim() : css.getPropertyValue("--down").trim(), borderWidth: 1.8, pointRadius: 0, tension: 0.1, fill: false }] },
-      options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, interaction: { mode: "index", intersect: false },
-        scales: { x: { ticks: { color: css.getPropertyValue("--muted").trim(), maxTicksLimit: 7 }, grid: { color: css.getPropertyValue("--line").trim() } },
-                  y: { ticks: { color: css.getPropertyValue("--muted").trim() }, grid: { color: css.getPropertyValue("--line").trim() } } } }
-    });
+    var note = "Not enough history yet; it builds up with every daily run.";
+    if (pts.length >= 2) {
+      var a0 = pts[0][1], a1 = pts[pts.length - 1][1], isY = h.unit === "yield";
+      var chg = isY ? ((a1 - a0) * 100).toFixed(0) + " bp" : ((a1 / a0 - 1) * 100).toFixed(1) + "%";
+      note = pts[0][0] + " " + a0.toLocaleString() + " → " + pts[pts.length - 1][0] + " " + a1.toLocaleString() + " (" + (a1 >= a0 ? "+" : "") + chg + ")" + (isY ? ", yield in %" : "");
+    }
+    $("#chartNote").textContent = note;
+    var box = clear($("#chart"));
+    if (chart) { try { chart.remove(); } catch (e) { /* already gone */ } chart = null; }
+    if (typeof LightweightCharts === "undefined" || pts.length < 2) return;
+    var css = getComputedStyle(document.documentElement), v = function (n) { return css.getPropertyValue(n).trim(); };
+    chart = LightweightCharts.createChart(box, { autoSize: true,
+      layout: { background: { type: "solid", color: "transparent" }, textColor: v("--muted"), fontFamily: "Inter, -apple-system, sans-serif" },
+      grid: { vertLines: { color: v("--line") }, horzLines: { color: v("--line") } },
+      rightPriceScale: { borderVisible: false }, timeScale: { borderVisible: false }, crosshair: { mode: 0 } });
+    var col = pts[pts.length - 1][1] >= pts[0][1] ? v("--up") : v("--down");
+    var series = chart.addAreaSeries({ lineColor: col, topColor: col + "55", bottomColor: col + "05", lineWidth: 2 });
+    series.setData(pts.map(function (p) { return { time: p[0], value: p[1] }; }));
+    chart.timeScale().fitContent();
   }
   $("#chartClose").addEventListener("click", function () { $("#chartModal").hidden = true; });
   $("#chartModal").addEventListener("click", function (e) { if (e.target.id === "chartModal") $("#chartModal").hidden = true; });
@@ -491,7 +564,7 @@
   function renderAll() {
     renderTicker(); renderFresh(); renderChecks(); renderDay(); renderWeek(); renderSources(); renderMovers(); renderHeat(); renderSeven();
     renderDownloads(); renderTrump(); renderLof();
-    renderTape(); renderInternals(); renderMacro(); renderLessons(); renderSteps(); renderUpdate(); renderMeter(); renderFedMood();
+    renderTape(); renderInternals(); renderMacro(); renderLessons(); renderSteps(); renderUpdate(); renderMeter(); renderFedMood(); renderRisk(); renderListen();
   }
   function bindTabs(sel, attr, fn) {
     document.querySelectorAll(sel + " button").forEach(function (b) { b.addEventListener("click", function () {

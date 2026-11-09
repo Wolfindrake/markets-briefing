@@ -273,3 +273,44 @@ def steps(rows, tape_, surprises_, overshoot_, week, view, headlines, forces) ->
         {"n": 5, "title": "S&P 500 view", "q": "Your Lords of Finance call and why.",
          "auto": (f"{call}: {(view or {}).get('reason', '')}" if call else "Not set yet: add sp500_view in content/briefing.yaml.")},
     ]
+
+
+def risk_strip(rows, fed=None) -> list[dict]:
+    """One-row risk dashboard: equity fear, bond fear, curve, credit, euro stress, Fed, dollar."""
+    R = _r(rows)
+    out = []
+
+    def add(label, value, level, tip):
+        out.append({"label": label, "value": value, "level": level, "tip": tip})
+    v = R.get("vix")
+    if v:
+        x = v["last"]
+        add("Equity fear (VIX)", f"{x:.1f}", "calm" if x < 15 else "normal" if x < 20 else "stressed" if x < 30 else "panic",
+            "Below 15 calm, 15-20 normal, 20-30 stressed, above 30 panic.")
+    m = R.get("move")
+    if m:
+        x = m["last"]
+        add("Bond fear (MOVE)", f"{x:.0f}", "calm" if x < 80 else "normal" if x < 120 else "stressed",
+            "Expected Treasury volatility: below 80 calm, above 120 stressed.")
+    if R.get("us10") and R.get("us2"):
+        c = (R["us10"]["last"] - R["us2"]["last"]) * 100
+        add("Yield curve 2s10s", f"{c:+.0f} bp", "stressed" if c < 0 else "normal" if c < 50 else "calm",
+            "Negative (inverted) has preceded past recessions; steep is normal.")
+    h, i = R.get("hyg"), R.get("ief")
+    if h and i and h.get("chg_pct") is not None and i.get("chg_pct") is not None:
+        d = h["chg_pct"] - i["chg_pct"]
+        add("Credit (junk vs Treasuries)", f"{d:+.2f} pp", "stressed" if d < -0.5 else "normal" if d < 0.2 else "calm",
+            "High-yield bonds (HYG) vs Treasuries (IEF) today: junk lagging means credit stress.")
+    if R.get("fr10") and R.get("de10"):
+        sp = (R["fr10"]["last"] - R["de10"]["last"]) * 100
+        add("Euro stress (OAT-Bund)", f"{sp:.0f} bp", "stressed" if sp >= 90 else "normal" if sp >= 60 else "calm",
+            "France minus Germany 10-year spread: above 90 bp is crisis territory.")
+    if fed:
+        k = fed["hike"] if fed["hike"] >= fed["cut"] else fed["cut"]
+        add("Fed (next meeting)", f"{k}% {'hike' if fed['hike'] >= fed['cut'] else 'cut'}", "stressed" if fed["hike"] >= 50 else "normal",
+            fed["text"])
+    d = R.get("dxy")
+    if d and (d.get("perf") or {}).get("week") is not None:
+        w = d["perf"]["week"]
+        add("Dollar (1 week)", f"{w:+.1f}%", "stressed" if abs(w) >= 1.5 else "normal", "Big dollar swings tighten global financial conditions.")
+    return out

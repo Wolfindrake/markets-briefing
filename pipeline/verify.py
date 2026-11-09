@@ -28,7 +28,7 @@ def _pct(series, date):
 
 
 def run(rows, market_date, csv_vals=None, csv_date=None, texts=None, calendar_rows=None, headlines=None,
-        offline=False) -> dict:
+        offline=False, consensus_check=None) -> dict:
     items = []
     sheet = [r for r in rows if r.get("sheet", True)]
     R = {r["key"]: r for r in rows}
@@ -118,6 +118,14 @@ def run(rows, market_date, csv_vals=None, csv_date=None, texts=None, calendar_ro
         sess = sum(1 for h in headlines if h.get("session"))
         items.append(_item("News", f"Headlines anchored to the {market_date} session", n > 0,
                            f"{sess} from the session day, {n - sess} after the close up to the next open" if n else "No headlines in the window"))
+
+    # 6. consensus confirmed by a second, independent calendar (FXStreet vs ForexFactory)
+    cc = [c for c in (consensus_check or []) if c.get("agree") is not None]
+    if cc:
+        bad = [c for c in cc if not c["agree"]]
+        items.append(_item("Consensus", f"Upcoming consensus figures agree across two calendars ({len(cc)} compared)", not bad,
+                           "OK: " + "; ".join(f"{c['event'].split(',')[0]} {c['fxstreet']}" for c in cc[:3]) if not bad else
+                           "Differ: " + "; ".join(f"{c['event'].split(',')[0]}: FXStreet {c['fxstreet']} vs ForexFactory {c['forexfactory']}" for c in bad[:4])))
 
     passed = sum(1 for i in items if i["ok"])
     return {"passed": passed, "total": len(items), "items": items,

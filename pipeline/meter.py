@@ -49,7 +49,32 @@ def _r(rows):
     return {r["key"]: r for r in rows if r.get("last") is not None}
 
 
-def build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date, macro_=None) -> dict:
+def regime(rows, closes) -> dict:
+    """Market regime from yesterday's close (no look-ahead): volatility x trend, the r/algotrading favourite filter."""
+    R = _r(rows)
+    rv = None
+    if len(closes) >= 21:
+        rets = [math.log(closes[i] / closes[i - 1]) for i in range(len(closes) - 20, len(closes))]
+        mu = sum(rets) / len(rets)
+        rv = math.sqrt(sum((x - mu) ** 2 for x in rets) / (len(rets) - 1)) * math.sqrt(252) * 100
+    slope = None
+    if len(closes) >= 30:
+        sma = lambda k, end: sum(closes[end - 20:end]) / 20  # noqa: E731
+        slope = (sma(20, len(closes)) / sma(20, len(closes) - 10) - 1) * 100
+    vix = (R.get("vix") or {}).get("last")
+    stressed = (vix is not None and vix >= 25) or (rv is not None and rv >= 25)
+    choppy = slope is not None and abs(slope) < 0.5 and (rv or 0) >= 15
+    name = "Stressed" if stressed else "Choppy" if choppy else "Trending" if slope is not None and abs(slope) >= 0.5 else "Calm"
+    gate = 0.7 if stressed else 0.8 if choppy else 1.0
+    bits = [f"VIX {vix:.1f}" if vix is not None else "", f"20-day realised vol {rv:.0f}%" if rv is not None else "",
+            f"20-day average {slope:+.1f}% over 2 weeks" if slope is not None else ""]
+    return {"name": name, "gate": gate, "detail": ", ".join(b for b in bits if b),
+            "note": {"Stressed": "Stressed regime: daily direction is close to a coin flip, so conviction is cut.",
+                     "Choppy": "Choppy, trendless market: signals whipsaw, so conviction is reduced.",
+                     "Trending": "Trending market: signals are more reliable.", "Calm": "Calm market."}[name]}
+
+
+def build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date, macro_=None, prev=None) -> dict:
     R = _r(rows)
     sig = []
 
@@ -113,47 +138,82 @@ def build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date,
     same = sum(s["weight"] for s in sig if s["score"] * score > 0) / tw
     risk = [e for e in (upcoming or [])[:4] if re.search(r"CPI|FOMC|Fed|payroll|rate decision|PCE|GDP", str(e.get("event", "")), re.I)]
     damp = 0.75 if risk else 1.0
-    needle = _c(score * 1.8) * (0.55 + 0.45 * same) * damp
+    reg = regime(rows, closes)
+    needle = _c(score * 1.8) * (0.55 + 0.45 * same) * damp * reg["gate"]
+    persist = ""
+    if abs(needle) >= 0.6:
+        pn = float((prev or {}).get("needle") or 0)
+        if not (pn * needle > 0 and abs(pn) >= 0.4):
+            needle = math.copysign(0.59, needle)
+            persist = " Strong calls need two runs in a row; today is capped at Lean."
     a = abs(needle)
     zone = ("Strong " if a >= 0.6 else "Lean " if a >= 0.2 else "") + ("Long" if needle > 0 else "Short") if a >= 0.2 else "Neutral"
     note = f"{len(sig)} signals, {same * 100:.0f}% of the weight agrees."
     if risk:
         note += f" Event risk before the next close ({risk[0].get('day', '')}: {risk[0].get('event', '')}) pulls the needle toward the middle."
+    note += " " + reg["note"] + persist
+    prob = 0.5 + 0.35 * needle   # probability the S&P closes the next session higher (15%..85%)
     return {"needle": round(needle, 3), "zone": zone, "conviction": round(a * 100), "score": round(score, 3),
+            "prob_up": round(prob * 100), "regime": reg,
             "agreement": round(same * 100), "signals": sorted(sig, key=lambda s: -abs(s["score"] * s["weight"])), "note": note}
 
 
+def last_call(path: Path, market_date: str) -> dict | None:
+    if not path.exists():
+        return None
+    with open(path, newline="", encoding="utf-8") as fh:
+        rows = [r for r in csv.DictReader(fh) if r["date"] < market_date]
+    return rows[-1] if rows else None
+
+
 def track(path: Path, market_date: str, meter: dict, spx_series) -> dict:
-    """Log today's call and score past calls against the next session's S&P close."""
+    """Log today's call and score past calls on the next session's S&P close: hit rate, Brier score, calibration."""
     rows = []
     if path.exists():
         with open(path, newline="", encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
     rows = [r for r in rows if r["date"] != market_date]
-    rows.append({"date": market_date, "needle": f"{meter.get('needle', 0):.3f}", "zone": meter.get("zone", "")})
+    rows.append({"date": market_date, "needle": f"{meter.get('needle', 0):.3f}", "zone": meter.get("zone", ""),
+                 "prob_up": str(meter.get("prob_up", 50))})
     rows.sort(key=lambda r: r["date"])
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=["date", "needle", "zone"])
+        w = csv.DictWriter(fh, fieldnames=["date", "needle", "zone", "prob_up"])
         w.writeheader()
-        w.writerows(rows)
+        w.writerows([{k: r.get(k, "") for k in ("date", "needle", "zone", "prob_up")} for r in rows])
     close = {p["date"]: p["close"] for p in spx_series}
     dates = sorted(close)
     hits = calls = 0
-    recent = []
+    briers, ups, recent = [], [], []
+    buckets = {"long": [0, 0], "short": [0, 0]}
     for r in rows:
-        n = float(r["needle"] or 0)
-        if abs(n) < 0.2 or r["date"] not in close:
+        if r["date"] not in close:
             continue
         nxt = [d for d in dates if d > r["date"]]
         if not nxt:
             continue
         move = close[nxt[0]] / close[r["date"]] - 1
-        ok = (move > 0) == (n > 0)
-        calls += 1
-        hits += ok
-        recent.append({"date": r["date"], "zone": r["zone"], "next": f"{move * 100:+.2f}%", "ok": ok})
-    return {"calls": calls, "hits": hits, "rate": round(100 * hits / calls) if calls else None, "recent": recent[-8:][::-1]}
+        up = 1.0 if move > 0 else 0.0
+        n = float(r["needle"] or 0)
+        p = float(r.get("prob_up") or (50 + 35 * n)) / 100
+        briers.append((p - up) ** 2)
+        ups.append(up)
+        if abs(n) >= 0.2:
+            ok = (move > 0) == (n > 0)
+            calls += 1
+            hits += ok
+            b = buckets["long" if n > 0 else "short"]
+            b[0] += 1
+            b[1] += ok
+            recent.append({"date": r["date"], "zone": r["zone"], "next": f"{move * 100:+.2f}%", "ok": ok})
+    brier = sum(briers) / len(briers) if briers else None
+    base_rate = sum(ups) / len(ups) if ups else None
+    base = None if base_rate is None else sum((base_rate - u) ** 2 for u in ups) / len(ups)
+    return {"calls": calls, "hits": hits, "rate": round(100 * hits / calls) if calls else None, "recent": recent[-8:][::-1],
+            "scored": len(briers), "brier": None if brier is None else round(brier, 3),
+            "coinflip": 0.25, "baseline": None if base is None else round(base, 3),
+            "long": {"n": buckets["long"][0], "right": buckets["long"][1]},
+            "short": {"n": buckets["short"][0], "right": buckets["short"][1]}}
 
 
 def alerts(rows, meter, fed, surprises_) -> list[str]:

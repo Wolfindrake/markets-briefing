@@ -73,6 +73,9 @@ Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site an
 - **News mood**: finance word lists applied to the session's FT, Bloomberg, MarketWatch and CNBC headlines.
 - **Alerts**: big moves (S&P ±2%, VIX +20%, 10Y ±10 bp), a Strong meter reading, a large Fed-odds swing or a
   hawkish/dovish data surprise open a GitHub issue in the repo, and GitHub emails it to you.
+  **Phone push (optional):** install the free ntfy app, subscribe to a long random topic name (e.g. `mb-7f3k9q2x`),
+  and add that name as the repository secret `NTFY_TOPIC`. Alerts then arrive as phone notifications.
+- **Install as an app:** open the site on your phone, Share → Add to Home Screen (iPhone) or Install app (Android).
 
 ## 3. Where everything comes from
 

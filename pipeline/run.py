@@ -14,7 +14,7 @@ import shutil
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from . import calendar, dashboard, extras, fedwatch, fetch, history, importers, journal, macro, meter, method, narrative, news, verify
+from . import calendar, dashboard, extras, fedwatch, fetch, history, importers, journal, listen, macro, meter, method, narrative, news, verify
 from .config import ROOT
 from .compute import PERF_KEYS, base_row, display, fill_perf_from_history, is_rate, row_from_series, row_from_values
 from .config import (CONTENT_DIR, DATA_DIR, DOWNLOADS, HISTORY_FILE, IMPORTS_DIR, JOURNAL_FILE, MANUAL_DIR, SEED_FILE, SITE_DATA,
@@ -145,6 +145,7 @@ def main(argv=None):
     week_all = calendar.merge(week_user, cal_up + cal_rel)   # your entries win; the calendar fills the gaps
     upcoming = [e for e in week_all if str(e.get("actual", "") or "").strip() == ""
                 and (not e.get("date") or str(e.get("date")) > market_date)]
+    consensus_check = [] if args.offline else calendar.cross_source(upcoming, calendar.ff_fetch())
 
     # ---- the professor's top-down toolkit: macro dashboard, data surprises, reaction-map read of the day
     macro_ = macro.dashboard(rows, args.offline, (brief or {}).get("macro_extra"))
@@ -170,7 +171,8 @@ def main(argv=None):
     claims = [sh.get("overview", "")] + [h for h in sh.get("highlights", []) if "expected" in h] + \
              [b for v in (sh.get("performance") or {}).values() for b in v]
     cross = verify.run(rows, market_date, inputs.get("csv_vals"), inputs.get("csv_date"), texts=claims,
-                       calendar_rows=week_all, headlines=None if args.offline else heads, offline=args.offline)
+                       calendar_rows=week_all, headlines=None if args.offline else heads, offline=args.offline,
+                       consensus_check=consensus_check)
     log.info("cross-checks: %d/%d passed", cross["passed"], cross["total"])
     sent = meter.sentiment(heads)
     if fed:
@@ -225,8 +227,10 @@ def main(argv=None):
     scored = journal.score(entries, spx_series) if spx_series else {"entries": [dict(e, status="no S&P data") for e in entries]}
 
     # ---- Lords of Finance meter (long / short), its track record, and alerts
-    ls = meter.build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date, macro_)
-    ls["track"] = {} if args.offline else meter.track(DATA_DIR / "history" / "meter.csv", market_date, ls, spx_series)
+    meter_log = DATA_DIR / "history" / "meter.csv"
+    ls = meter.build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date, macro_,
+                     prev=meter.last_call(meter_log, market_date))
+    ls["track"] = {} if args.offline else meter.track(meter_log, market_date, ls, spx_series)
     ls["horizon"] = "S&P 500, next session (class game rules: entered at the open, held to the close before the next class)"
     al = [] if args.offline else meter.alerts(rows, ls, fed, surprises_)
     alert_file = ROOT / "alert.md"
@@ -240,7 +244,9 @@ def main(argv=None):
                "lessons": method.lessons(rows, tape_, surprises_, macro_), "library": method.library(),
                "steps": method.steps(rows, tape_, surprises_, over, upcoming, view, heads, text["simple"].get("forces"))}
 
-    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, extra={"meter": ls, "fed": fed, "sentiment": sent}, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
+    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, extra={"meter": ls, "fed": fed, "sentiment": sent, "risk": method.risk_strip(rows, fed),
+                                  "consensusCheck": consensus_check,
+                                  "listen": text.get("listen") or listen.script(rows, market_date, tape_, surprises_, fed, ls, upcoming, sent)}, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
                            issues=issues, headlines=heads, trump_heads=trump_heads, inputs=inputs, downloads=downloads, cfg=cfg,
                            prev_path=SITE_DATA / "dashboard.json", snaps_path=DATA_DIR / "snapshots.json", history=hist_out)
     (SITE_DATA / "dashboard.json").write_text(json.dumps(data, default=str, ensure_ascii=False), encoding="utf-8")

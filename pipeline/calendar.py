@@ -140,3 +140,71 @@ def sheet_rows(entries: list[dict], limit: int = 6) -> list[dict]:
             index[k] = len(rows)
             rows.append({**e, "consensus": e.get("consensus", "") or "", "previous": e.get("previous", "") or ""})
     return rows[:limit] + ahead[:2]
+
+
+# ---------------------------------------------------------------- second source for consensus: ForexFactory
+FF_URLS = ["https://nfs.faireconomy.media/ff_calendar_thisweek.json", "https://nfs.faireconomy.media/ff_calendar_nextweek.json"]
+FF_CCY = {"USD": "US", "EUR": "EZ", "GBP": "UK", "CNY": "CN", "JPY": "JP"}
+TERMS = ["core cpi", "cpi", "hicp", "core pce", "pce", "ppi", "gdp", "payroll", "unemployment", "jobless", "retail",
+         "pmi", "ism", "sentiment", "rate decision", "interest rate", "earnings", "claims"]
+
+
+def ff_fetch() -> list[dict]:
+    out = []
+    for u in FF_URLS:
+        try:
+            r = requests.get(u, headers=HEAD, timeout=20)
+            if r.ok:
+                out += [e for e in r.json() if isinstance(e, dict)]
+        except Exception as exc:  # noqa: BLE001
+            log.warning("ForexFactory feed unavailable: %s", exc)
+    return out
+
+
+def _key_terms(name):
+    n = short(name).lower().replace("non-farm", "payroll").replace("nonfarm", "payroll")
+    n = n.replace("hicp", "cpi") if "core" not in n else n
+    t = next((x for x in TERMS if x in n), None)
+    per = ("y/y" if re.search(r"y/y|\(yoy\)|yoy", n) else "m/m" if re.search(r"m/m|\(mom\)|mom", n)
+           else "q/q" if re.search(r"q/q|\(qoq\)|qoq", n) else "")
+    return t, per
+
+
+def ff_match(ev: dict, ff: list[dict]) -> dict | None:
+    t, per = _key_terms(ev.get("event", ""))
+    if not t:
+        return None
+    for e in ff:
+        if FF_CCY.get(e.get("country")) != ev.get("region") and not (e.get("country") == "EUR" and ev.get("region") in ("DE", "EZ")):
+            continue
+        try:
+            d = datetime.fromisoformat(e["date"]).date()
+        except (KeyError, ValueError):
+            continue
+        if abs((d - ev["date"]).days) > 1:
+            continue
+        t2, per2 = _key_terms(e.get("title", ""))
+        if t2 == t and per == per2:
+            return e
+    return None
+
+
+def cross_source(upcoming: list[dict], ff: list[dict]) -> list[dict]:
+    """Attach the ForexFactory consensus to each upcoming release and report agreement."""
+    rows = []
+    for ev in upcoming:
+        if not isinstance(ev.get("date"), date):
+            continue
+        m = ff_match(ev, ff)
+        if not m or not m.get("forecast"):
+            continue
+        a = re.findall(r"-?\d+(?:\.\d+)?", str(ev.get("consensus", "")).split("/")[0])
+        b = re.findall(r"-?\d+(?:\.\d+)?", str(m.get("forecast")))
+        if not ev.get("consensus"):
+            ev["consensus"] = f"{m['forecast']} (FF)"
+            ok = None
+        else:
+            ok = bool(a and b and abs(float(a[0]) - float(b[0])) <= 0.051)
+        rows.append({"event": ev.get("event", ""), "day": ev.get("day", ""), "fxstreet": ev.get("consensus", ""),
+                     "forexfactory": m.get("forecast"), "ff_title": m.get("title"), "agree": ok})
+    return rows

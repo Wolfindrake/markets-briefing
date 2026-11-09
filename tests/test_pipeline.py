@@ -121,17 +121,45 @@ def test_meter_and_sentiment():
     bull = [r("vix", "index", 14, -2, -12), r("us10", "yield", 4.5, -0.08, -1.7), r("dxy", "index", 100, -0.5, -0.5),
             r("rsp", "price", 180, 2, 1.2), r("spx", "index", 129.5, 0.5, 0.39)]
     heads = [{"headline": "Stocks rally as inflation cools"}, {"headline": "Shares rise on soft landing hopes"}]
-    m = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads), [], up[-1]["date"])
-    assert m["needle"] > 0.4 and "Long" in m["zone"], m
+    strong_prev = {"needle": "0.7"}
+    m = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads), [], up[-1]["date"], prev=strong_prev)
+    assert m["needle"] > 0.4 and "Long" in m["zone"] and m["prob_up"] > 60, m
+    capped = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads), [], up[-1]["date"])
+    assert capped["needle"] <= 0.59 + 1e-9   # persistence: no Strong call on the first day
     bear = [r("vix", "index", 24, 5, 26), r("us10", "yield", 4.9, 0.12, 2.5), r("dxy", "index", 100, 0.6, 0.6),
             r("rsp", "price", 180, -3, -1.8)]
     down = [{"date": x["date"], "close": 200 - i * 0.5} for i, x in enumerate(up)]
     m2 = meter.build(bear, down, {"key": "hawkish", "name": "Hawkish"}, [], None,
-                     meter.sentiment([{"headline": "Stocks tumble on recession fears"}]), [], down[-1]["date"])
+                     meter.sentiment([{"headline": "Stocks tumble on recession fears"}]), [], down[-1]["date"], prev={"needle": "-0.7"})
     assert m2["needle"] < -0.4 and "Short" in m2["zone"], m2
     m3 = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads),
-                     [{"day": "Tue", "event": "CPI y/y, 13:30 GMT"}], up[-1]["date"])
+                     [{"day": "Tue", "event": "CPI y/y, 13:30 GMT"}], up[-1]["date"], prev=strong_prev)
     assert abs(m3["needle"]) < abs(m["needle"])   # event risk pulls the needle to the middle
+
+
+def test_meter_track_brier():
+    import tempfile
+    from pathlib import Path
+    from pipeline import meter
+    spx = [{"date": f"2026-10-{d:02d}", "close": c} for d, c in ((1, 100), (2, 101), (5, 100), (6, 102))]
+    with tempfile.TemporaryDirectory() as t:
+        p = Path(t) / "m.csv"
+        for d, n in (("2026-10-01", 0.5), ("2026-10-02", 0.5), ("2026-10-05", 0.5)):
+            tr = meter.track(p, d, {"needle": n, "zone": "Lean Long", "prob_up": round(50 + 35 * n)}, spx)
+        assert tr["calls"] == 3 and tr["hits"] == 2 and tr["scored"] == 3
+        assert abs(tr["brier"] - round(((0.68 - 1) ** 2 * 2 + 0.68 ** 2) / 3, 3)) < 1e-6
+
+
+def test_listen_script():
+    from pipeline import listen
+    def r(k, u, last, chg, pct):
+        return {"key": k, "unit": u, "last": last, "chg": chg, "chg_pct": pct}
+    out = listen.script([r("spx", "index", 7376.86, 23.1, 0.31), r("us10", "yield", 4.86, 0.02, 0.4)], "2026-11-06",
+                        fed={"text": "Fed funds futures price a 79% chance of a 25 bp hike at the 9 Dec FOMC."},
+                        upcoming=[{"day": "Tue 10 Nov", "region": "US", "event": "CPI y/y, 13:30 GMT", "consensus": "3.9%"}])
+    text = " ".join(out["sentences"])
+    assert "%" not in text and " bp" not in text and "FOMC" not in text
+    assert "up 0.3 percent" in text and "25 basis point hike" in text and "Tuesday, US CPI" in text
 
 
 def test_fed_odds_arithmetic():

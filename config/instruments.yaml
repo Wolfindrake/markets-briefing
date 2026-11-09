@@ -67,3 +67,4 @@ instruments:
   - {key: rsp,      name: "S&P 500 Equal Weight (RSP)",     symbol: "RSP",           group: equities, unit: price, decimals: 2, source: yahoo, ticker: "RSP",        aliases: ["Invesco S&P 500 Equal Weight ETF", "RSP"], sheet: false}
   - {key: sox,      name: "PHLX Semiconductor Index",       symbol: "SOX",           group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^SOX",       aliases: ["PHLX Semiconductor", "Philadelphia Semiconductor", "SOX"], sheet: false}
   - {key: dxy,      name: "US Dollar Index",                symbol: "DXY",           group: others,   unit: index, decimals: 2, source: yahoo, ticker: "DX-Y.NYB",   aliases: ["US Dollar Index", "DXY"], sheet: false}
+  - {key: hyg,      name: "High Yield Corporate Bond ETF (HYG)", symbol: "HYG",       group: fixed_income, unit: price, decimals: 2, source: yahoo, ticker: "HYG",        aliases: ["HYG"], sheet: false}

@@ -306,6 +306,8 @@ Return ONE JSON object, no prose, with exactly these keys:
  }},
  "sheet": {{"overview": "2-3 sentences for a managing director", "highlights": ["5-7 bullets: data vs expectations, central banks, earnings, geopolitics"],
            "performance": {{"equities": ["2-3 bullets"], "fixed_income": ["2-3 bullets"], "others": ["2-3 bullets"]}}}},
+ "listen": ["8-12 short sentences to be READ ALOUD on a commute: what changed and why, plain words, no symbols
+            (say 'percent', 'basis points'), numbers rounded, end with what's coming up"],
  "trump": {{"summaryBullets": ["2-4 bullets on Trump-related policy news and the market reaction, only if in HEADLINES"],
            "weeklySummary": "2-3 sentences or empty",
            "majorMoves": [ {{"id": "slug", "title": "...", "dateRange": "...", "background": "...",
@@ -422,5 +424,10 @@ def merge(base: dict, extra: dict | None, allowed_urls: set[str]) -> dict:
             if isinstance(m, dict) and isinstance(m.get("source"), dict) and m["source"].get("url") not in allowed_urls:
                 m["source"]["url"] = ""
         out["trump"] = t
+    li = extra.get("listen")
+    if isinstance(li, list) and len(li) >= 4 and all(ok_str(x) for x in li):
+        from .listen import speakable
+        out["listen"] = {"sentences": [speakable(x) for x in li[:14]], "words": sum(len(x.split()) for x in li),
+                         "seconds": round(sum(len(x.split()) for x in li) / 2.6), "ai": True}
     out["ai_used"] = True
     return out
