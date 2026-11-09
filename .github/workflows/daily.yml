@@ -83,7 +83,10 @@ jobs:
         if: hashFiles('alert.md') != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh issue create --title "Market alert $(date -u +%Y-%m-%d)" --body-file alert.md || true
+        run: |
+          T="Market alert $(date -u +%Y-%m-%d)"
+          N=$(gh issue list --state open --search "\"$T\" in:title" --json number --jq '.[0].number' || true)
+          if [ -n "$N" ]; then gh issue comment "$N" --body-file alert.md || true; else gh issue create --title "$T" --body-file alert.md || true; fi
 
       - name: Phone push (ntfy.sh, optional)
         if: hashFiles('alert.md') != ''
