@@ -180,9 +180,9 @@ def main(argv=None):
     meta = {"title": cfg["sheet"]["title"], "market_date": market_date, "as_of": as_of,
             "source_note": cfg["sheet"]["source_note"], "team_label": cfg["site"].get("team_label", "")}
     if brief_current:
-        sheet_brief = {**brief, "week_ahead": upcoming[:7]}
+        sheet_brief = {**brief, "week_ahead": calendar.sheet_rows(upcoming)}
     else:
-        sheet_brief = {**text["sheet"], "week_ahead": upcoming[:7], "sp500_view": {}}
+        sheet_brief = {**text["sheet"], "week_ahead": calendar.sheet_rows(upcoming), "sp500_view": {}}
     # one date: any row not from the market close is starred and dated in the footnote (never passed off as fresh)
     dd = lambda iso: f"{iso[8:10]}/{iso[5:7]}"  # noqa: E731
     lag = [r for r in sheet_rows if r.get("date") and r["date"] != market_date]

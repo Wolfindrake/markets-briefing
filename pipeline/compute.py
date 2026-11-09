@@ -76,7 +76,7 @@ def base_row(inst: dict) -> dict:
         "group": inst["group"], "unit": inst["unit"], "decimals": inst.get("decimals", 2),
         "date": None, "last": None, "open": None, "prev": None, "chg": None, "chg_pct": None,
         "perf": {k: None for k in PERF_KEYS}, "source": "none", "flags": [],
-        "sheet": inst.get("sheet", True),
+        "sheet": inst.get("sheet", True), "investing": inst.get("investing", ""),
     }
 
 

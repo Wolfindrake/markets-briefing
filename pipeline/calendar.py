@@ -33,12 +33,14 @@ def fetch(start: date, end: date) -> list[dict]:
         return []
 
 
-def _fmt(v, unit):
+def _fmt(v, unit, name=""):
     if v is None:
         return ""
+    if not (unit or "").strip() and re.search(r"payroll|employment change|jobless claims|claims", name or "", re.I):
+        unit = "K"
     s = f"{v:,.2f}".rstrip("0").rstrip(".") if isinstance(v, (int, float)) else str(v)
     u = (unit or "").strip()
-    return f"{s}{'%' if u == '%' else (u if u in ('K', 'M', 'B') else '')}"
+    return f"{s}{'%' if u == '%' else (u.lower() if u in ('K', 'M', 'B') else '')}"
 
 
 SHORT = [(r"Harmonized Index of Consumer Prices", "HICP"), (r"Consumer Price Index", "CPI"), (r"Producer Price Index", "PPI"),
@@ -86,8 +88,8 @@ def build(market_date: str, days_back: int = 8, days_ahead: int = 10) -> tuple[l
         label = base + ("" if speech else (" y/y" if "(YoY)" in (main.get("name") or "") else "")) + (" and core" if core else "")
 
         def pair(f):
-            a = _fmt(head.get(f), head.get("unit"))
-            b = _fmt(core.get(f), core.get("unit")) if core else ""
+            a = _fmt(head.get(f), head.get("unit"), head.get("name"))
+            b = _fmt(core.get(f), core.get("unit"), core.get("name")) if core else ""
             return f"{a} / core {b}" if a and b else a
         ev = {"date": d, "day": f"{d:%a} {d.day} {d:%b}", "region": region,
               "event": f"{label}, {dt:%H:%M} GMT", "consensus": pair("consensus"), "previous": pair("previous"),
@@ -96,9 +98,9 @@ def build(market_date: str, days_back: int = 8, days_ahead: int = 10) -> tuple[l
             upcoming.append(ev)
         elif main.get("actual") is not None:
             if main.get("consensus") is not None:
-                released.append({**ev, "event": label.replace(" and core", ""), "actual": _fmt(main.get("actual"), main.get("unit")),
-                                 "consensus": _fmt(main.get("consensus"), main.get("unit")),
-                                 "previous": _fmt(main.get("previous"), main.get("unit"))})
+                released.append({**ev, "event": label.replace(" and core", ""), "actual": _fmt(main.get("actual"), main.get("unit"), main.get("name")),
+                                 "consensus": _fmt(main.get("consensus"), main.get("unit"), main.get("name")),
+                                 "previous": _fmt(main.get("previous"), main.get("unit"), main.get("name"))})
     return upcoming[:10], released
 
 
@@ -115,3 +117,26 @@ def merge(user: list[dict], auto: list[dict]) -> list[dict]:
         if not dup:
             out.append(e)
     return sorted(out, key=lambda e: str(e.get("date", "9999")))
+
+
+def sheet_rows(entries: list[dict], limit: int = 6) -> list[dict]:
+    """The professor's week-ahead style: one row per day and region, events joined with '. ', 5-7 rows,
+    with 'Ahead' rows (e.g. the next FOMC) kept at the end."""
+    ahead = [e for e in entries if str(e.get("day", "")).lower() == "ahead"]
+    dated = [e for e in entries if e not in ahead]
+    rows, index = [], {}
+    for e in dated:
+        k = (str(e.get("date", "")), e.get("day", ""))
+        if k in index:
+            r = rows[index[k]]
+            regions = [x for x in str(r["region"]).split(" / ") if x]
+            if e.get("region") and e["region"] not in regions:
+                regions.append(e["region"])
+            r["region"] = " / ".join(regions)
+            r["event"] = f"{r['event']}. {e.get('event', '')}"
+            r["consensus"] = " · ".join(x for x in (r["consensus"], e.get("consensus", "")) if x)
+            r["previous"] = " · ".join(x for x in (r["previous"], e.get("previous", "")) if x)
+        else:
+            index[k] = len(rows)
+            rows.append({**e, "consensus": e.get("consensus", "") or "", "previous": e.get("previous", "") or ""})
+    return rows[:limit] + ahead[:2]

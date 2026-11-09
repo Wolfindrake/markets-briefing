@@ -133,10 +133,10 @@ def internals(rows: list[dict]) -> list[dict]:
         out.append({"key": "chips", "label": "Chips (SOX)", "value": f"{sox:+.1f}%",
                     "note": "The AI trade drove the day." if abs(sox) >= 3 else "Chips in line with the market."})
     dxy = R.get("dxy")
-    if dxy:
+    if dxy and _pct(dxy) is not None:
         out.append({"key": "dollar", "label": "Dollar index", "value": f"{dxy['last']:.2f} ({_pct(dxy):+.2f}%)", "note": ""})
     vix = R.get("vix")
-    if vix:
+    if vix and _pct(vix) is not None:
         lvl = vix["last"]
         out.append({"key": "fear", "label": "Fear gauge (VIX)", "value": f"{lvl:.1f} ({_pct(vix):+.0f}%)",
                     "note": "Calm (below 15)." if lvl < 15 else "Normal (15-20)." if lvl < 20 else "Stressed (20-30)." if lvl < 30 else "Panic territory (above 30)."})

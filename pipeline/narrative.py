@@ -113,10 +113,23 @@ def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
     def join(keys, week=True, labels=None):
         return ". ".join(tw(k, (labels or {}).get(k), week) for k in keys if k in R)
 
+    def tone(keys):  # "higher" / "lower" / "mixed", as in the professor's "US lower on inflation data:"
+        v = [R[k]["chg_pct"] for k in keys if k in R and R[k].get("chg_pct") is not None]
+        if not v:
+            return ""
+        up = sum(1 for x in v if x > 0.05)
+        dn = sum(1 for x in v if x < -0.05)
+        return "higher" if up and not dn else "lower" if dn and not up else "mixed"
+
+    def ytd(k):
+        y = (R[k].get("perf") or {}).get("ytd") if k in R else None
+        return f", {y:+.1f}% YTD" if y is not None and not is_rate(R[k]["unit"]) else (f", {y:+.0f} bp YTD" if y is not None else "")
+
     eq = [x for x in (
-        ("US: " + chg_to(["spx", "ixic", "dji", "rut"])) if "spx" in R else "",
-        ("Europe: " + chg_to(["sx5e", "dax", "cac", "ibex"])) if "sx5e" in R else "",
-        ("Asia: " + ", ".join(f"{nm(k)} {_today(R[k])}" for k in ("n225", "kospi", "csi300", "nifty") if k in R)) if any(k in R for k in ("n225", "kospi")) else "",
+        (f"US {tone(['spx', 'ixic', 'dji', 'rut'])}: " + chg_to(["spx", "ixic", "dji", "rut"]) + ytd("spx").replace(",", ";", 1).replace("; ", ". S&P 500 ", 1)) if "spx" in R else "",
+        (f"Europe {tone(['sx5e', 'dax', 'cac', 'ibex'])}: " + chg_to(["sx5e", "dax", "cac", "ibex"])) if "sx5e" in R else "",
+        (f"Asia {tone(['n225', 'kospi', 'csi300', 'nifty'])}: " + ", ".join(f"{nm(k)} {_today(R[k])}" for k in ("n225", "kospi", "csi300", "nifty") if k in R)) if any(k in R for k in ("n225", "kospi")) else "",
+        (f"VIX {_lvl(R['vix'])}, {_today(R['vix'])} today" + (f" and {_week(R['vix'])} on the week" if _week(R['vix']) else "")) if "vix" in R else "",
         ("On the week: " + ", ".join(f"{nm(k)} {_week(R[k])}" for k in ("spx", "ixic", "sx5e", "msciw") if k in R and _week(R[k]))) if "spx" in R and _week(R["spx"]) else "",
     ) if x]
     fi = [x for x in (
@@ -126,8 +139,8 @@ def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
         join(["jp10", "frcds"], labels={"frcds": "France 5Y CDS"}),
     ) if x]
     ot = [x for x in (
-        join(["brent", "wti"]),
-        join(["xau", "xag"], labels={"xag": "Silver"}),
+        join(["brent", "wti"]) + ytd("brent"),
+        join(["xau", "xag"], labels={"xag": "Silver"}) + ytd("xau"),
         ". ".join(f"{nm(k)} {_lvl(R[k])}, {_today(R[k])}" for k in ("eurusd", "usdjpy", "usdchf") if k in R),
         join(["btc", "ttf"], labels={"ttf": "European gas"}),
     ) if x]
@@ -150,9 +163,10 @@ def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
     surp = [s for s in (surprises_ or []) if s.get("signal")]
     if surp:
         s = surp[0]
-        over.append(f"{s['event']} {s['actual']} vs {s['consensus']} expected: {s['label'].lower()}.")
+        over.append(f"{s['event']} {s['actual']} against {s['consensus']} expected: {s['label'].lower()}.")
 
-    hl = [f"{s['event']}: {s['actual']} vs {s['consensus']} expected (previous {s['previous']}). {s['label']}." for s in surp[:3]]
+    hl = [f"{s.get('region', '') + ' ' if s.get('region') else ''}{s['event']} ({str(s.get('day', '')).split(' ', 1)[-1]}): "
+          f"{s['actual']} against {s['consensus']} expected, previous {s['previous']}. {s['label']}." for s in surp[:4]]
     hl += [f"{h['headline'].rstrip('.')} ({h['source']})." for h in headlines[: max(0, 8 - len(hl))]]
     return {"overview": " ".join(over), "highlights": hl, "performance": {"equities": eq, "fixed_income": fi, "others": ot}}
 
@@ -268,7 +282,14 @@ Follow the course method (top-down, Prof. Dieguez M4S4):
    behaved as expected; if not, say why (another driver, or the regime: with inflation above target, good growth
    news can be bad news for stocks).
  - The sheet is notes for a managing director: figures and how they compared with expectations, no teaching.
-   Performance bullets in the style "US 2Y 4.46%, -12 bp today and -19 bp on the week".
+   House style (from the professor's own sheets, see docs/PROFESSOR_FORMAT.md):
+   * Performance: 4 bullets each for equities, fixed income, others. Start with a lead such as "US lower on the CPI:".
+     Pattern: "S&P 500 -1.1% to 7,720, -1.1% on the week, +12.8% YTD". Rates in bp: "US 2Y 4.46%, -12 bp today and
+     -19 bp on the week". Add context when true: "highest since December 2022", "worst day since March 2020".
+   * Overview: ONE bullet, 2-3 sentences: the main data/central-bank/geopolitical driver, then how markets reacted.
+   * Highlights: 7-10 bullets, each "Topic (date): fact with figures against expectations", e.g. "US CPI (14 Oct): headline
+     3.7% YoY against 3.6% expected; core 2.6% against 2.5%". Cover data, central banks, earnings (EPS vs estimate),
+     sector moves with named stocks, energy/geopolitics, Europe/France.
 
 Return ONE JSON object, no prose, with exactly these keys:
 {{

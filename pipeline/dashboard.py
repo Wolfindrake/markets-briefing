@@ -160,5 +160,6 @@ def build(*, rows, market_date, week=None, macro=None, surprises=None, reading=N
         "downloads": downloads,
         "briefingCurrent": bool(brief) and str(brief.get("date", "")) == market_date,
         "site": cfg.get("site", {}),
+        "links": {r["name"]: "https://www.investing.com" + r["investing"] for r in rows if r.get("investing")},
     }
     return data

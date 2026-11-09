@@ -13,6 +13,7 @@
 #              (Germany 10Y = Bundesbank Svensson 10-year estimate; Japan 10Y = Ministry of Finance benchmark yield)
 #   aliases    names this instrument may have in an Investing.com watchlist CSV export
 #   sheet      false = dashboard only (not printed on the sheet)
+#   investing  path of the instrument's page on investing.com (the site links to it)
 #
 # Any instrument found in an Investing.com CSV in data/imports/ is taken from the CSV
 # (so the numbers match the professor's sheet). Otherwise the source below is used,
@@ -20,46 +21,46 @@
 
 instruments:
   # ---------------- EQUITIES ----------------
-  - {key: vix,      name: "CBOE Volatility Index",          symbol: "VIX",           group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^VIX",       aliases: ["S&P 500 VIX", "CBOE Volatility Index", "VIX"]}
-  - {key: spx,      name: "S&P 500",                        symbol: "US500",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^GSPC",      aliases: ["S&P 500", "US 500", "US500"]}
-  - {key: ixic,     name: "NASDAQ Composite",               symbol: ".IXIC",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IXIC",      aliases: ["Nasdaq", "NASDAQ Composite", ".IXIC"]}
-  - {key: dji,      name: "Dow Jones Industrial Average",   symbol: ".DJI",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^DJI",       aliases: ["Dow Jones", "Dow Jones Industrial Average", ".DJI"]}
-  - {key: rut,      name: "US Small Cap 2000",              symbol: "US2000",        group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^RUT",       aliases: ["Small Cap 2000", "US Small Cap 2000", "Russell 2000", "US2000"]}
-  - {key: ibx50,    name: "Bovespa Brazil 50",              symbol: ".IBX50",        group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IBX50",     aliases: ["Bovespa Brazil 50", "Brazil 50", "IBrX 50", ".IBX50"]}
-  - {key: sx5e,     name: "Euro Stoxx 50",                  symbol: "STOXX50",       group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^STOXX50E",  aliases: ["Euro Stoxx 50", "STOXX50"]}
-  - {key: dax,      name: "DAX",                            symbol: "DE40",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^GDAXI",     aliases: ["DAX", "Germany 40", "DE40"]}
-  - {key: cac,      name: "CAC 40",                         symbol: ".FCHI",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^FCHI",      aliases: ["CAC 40", ".FCHI"]}
-  - {key: ibex,     name: "IBEX 35",                        symbol: "ES35",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IBEX",      aliases: ["IBEX 35", "Spain 35", "ES35"]}
-  - {key: msciw,    name: "MSCI World",                     symbol: ".MIWO00000PUS", group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^990100-USD-STRD", aliases: ["MSCI World", ".MIWO00000PUS"]}
-  - {key: mscieu,   name: "MSCI Europe",                    symbol: ".MIEU00000PUS", group: equities, unit: index, decimals: 2, source: manual, ticker: "",          aliases: ["MSCI Europe", ".MIEU00000PUS"]}
-  - {key: msciem,   name: "MSCI Emerging Markets",          symbol: ".MSCIEF",       group: equities, unit: index, decimals: 2, source: manual, ticker: "",          aliases: ["MSCI Emerging Markets", ".MSCIEF"]}
-  - {key: n225,     name: "Nikkei 225",                     symbol: "JP225",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^N225",      aliases: ["Nikkei 225", "Japan 225", "JP225"]}
-  - {key: kospi,    name: "KOSPI",                          symbol: ".KS11",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^KS11",      aliases: ["KOSPI", ".KS11"]}
-  - {key: csi300,   name: "Shanghai Shenzhen CSI 300",      symbol: ".CSI300",       group: equities, unit: index, decimals: 2, source: yahoo, ticker: "000300.SS",  aliases: ["CSI 300", "Shanghai Shenzhen CSI 300", ".CSI300"]}
-  - {key: nifty,    name: "Nifty 50",                       symbol: ".NSEI",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^NSEI",      aliases: ["Nifty 50", ".NSEI"]}
+  - {key: vix,      name: "CBOE Volatility Index",          symbol: "VIX",           group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^VIX",       aliases: ["S&P 500 VIX", "CBOE Volatility Index", "VIX"], investing: "/indices/volatility-s-p-500"}
+  - {key: spx,      name: "S&P 500",                        symbol: "US500",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^GSPC",      aliases: ["S&P 500", "US 500", "US500"], investing: "/indices/us-spx-500"}
+  - {key: ixic,     name: "NASDAQ Composite",               symbol: ".IXIC",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IXIC",      aliases: ["Nasdaq", "NASDAQ Composite", ".IXIC"], investing: "/indices/nasdaq-composite"}
+  - {key: dji,      name: "Dow Jones Industrial Average",   symbol: ".DJI",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^DJI",       aliases: ["Dow Jones", "Dow Jones Industrial Average", ".DJI"], investing: "/indices/us-30"}
+  - {key: rut,      name: "US Small Cap 2000",              symbol: "US2000",        group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^RUT",       aliases: ["Small Cap 2000", "US Small Cap 2000", "Russell 2000", "US2000"], investing: "/indices/smallcap-2000"}
+  - {key: ibx50,    name: "Bovespa Brazil 50",              symbol: ".IBX50",        group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IBX50",     aliases: ["Bovespa Brazil 50", "Brazil 50", "IBrX 50", ".IBX50"], investing: "/search/?q=Brazil%2050"}
+  - {key: sx5e,     name: "Euro Stoxx 50",                  symbol: "STOXX50",       group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^STOXX50E",  aliases: ["Euro Stoxx 50", "STOXX50"], investing: "/indices/eu-stoxx50"}
+  - {key: dax,      name: "DAX",                            symbol: "DE40",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^GDAXI",     aliases: ["DAX", "Germany 40", "DE40"], investing: "/indices/germany-30"}
+  - {key: cac,      name: "CAC 40",                         symbol: ".FCHI",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^FCHI",      aliases: ["CAC 40", ".FCHI"], investing: "/indices/france-40"}
+  - {key: ibex,     name: "IBEX 35",                        symbol: "ES35",          group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^IBEX",      aliases: ["IBEX 35", "Spain 35", "ES35"], investing: "/indices/spain-35"}
+  - {key: msciw,    name: "MSCI World",                     symbol: ".MIWO00000PUS", group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^990100-USD-STRD", aliases: ["MSCI World", ".MIWO00000PUS"], investing: "/indices/msci-world"}
+  - {key: mscieu,   name: "MSCI Europe",                    symbol: ".MIEU00000PUS", group: equities, unit: index, decimals: 2, source: manual, ticker: "",          aliases: ["MSCI Europe", ".MIEU00000PUS"], investing: "/indices/msci-europe"}
+  - {key: msciem,   name: "MSCI Emerging Markets",          symbol: ".MSCIEF",       group: equities, unit: index, decimals: 2, source: manual, ticker: "",          aliases: ["MSCI Emerging Markets", ".MSCIEF"], investing: "/indices/msci-emerging-markets"}
+  - {key: n225,     name: "Nikkei 225",                     symbol: "JP225",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^N225",      aliases: ["Nikkei 225", "Japan 225", "JP225"], investing: "/indices/japan-ni225"}
+  - {key: kospi,    name: "KOSPI",                          symbol: ".KS11",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^KS11",      aliases: ["KOSPI", ".KS11"], investing: "/indices/kospi"}
+  - {key: csi300,   name: "Shanghai Shenzhen CSI 300",      symbol: ".CSI300",       group: equities, unit: index, decimals: 2, source: yahoo, ticker: "000300.SS",  aliases: ["CSI 300", "Shanghai Shenzhen CSI 300", ".CSI300"], investing: "/indices/csi300"}
+  - {key: nifty,    name: "Nifty 50",                       symbol: ".NSEI",         group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^NSEI",      aliases: ["Nifty 50", ".NSEI"], investing: "/indices/s-p-cnx-nifty"}
 
   # ---------------- FIXED INCOME ----------------
-  - {key: move,     name: "ICE BofAML MOVE",                symbol: ".MOVE",         group: fixed_income, unit: index, decimals: 2, source: yahoo, ticker: "^MOVE",   aliases: ["ICE BofAML MOVE", "MOVE", ".MOVE"]}
-  - {key: ief,      name: "iShares 7-10 Year Treasury ETF", symbol: "IEF.O",    group: fixed_income, unit: price, decimals: 2, source: yahoo, ticker: "IEF",     aliases: ["iShares 7-10 Year Treasury Bond", "iShares 7-10 Year Treasury Bond ETF", "IEF"]}
-  - {key: us30,     name: "United States 30-Year",          symbol: "USc1=",         group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "30 Yr", aliases: ["U.S. 30Y", "United States 30-Year", "US 30Y"]}
-  - {key: us10,     name: "United States 10-Year",          symbol: "US10YT=X",      group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "10 Yr", aliases: ["U.S. 10Y", "United States 10-Year", "US 10Y"]}
-  - {key: us2,      name: "United States 2-Year",           symbol: "TUc1=",         group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "2 Yr",  aliases: ["U.S. 2Y", "United States 2-Year", "US 2Y"]}
-  - {key: de10,     name: "Germany 10-Year",                symbol: "DE10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: bundesbank, ticker: "D.I.ZAR.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A", aliases: ["Germany 10Y", "Germany 10-Year"]}
-  - {key: fr10,     name: "France 10-Year",                 symbol: "FR10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: manual, ticker: "",       aliases: ["France 10Y", "France 10-Year"]}
-  - {key: frcds,    name: "France CDS 5 Years USD",         symbol: "FRGV5YUSAC=R",  group: fixed_income, unit: cds,   decimals: 2, source: manual, ticker: "",       aliases: ["France CDS 5 Years", "France CDS 5 Years USD"]}
-  - {key: jp10,     name: "Japan 10-Year",                  symbol: "JP10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: mof, ticker: "10Y",       aliases: ["Japan 10Y", "Japan 10-Year"]}
+  - {key: move,     name: "ICE BofAML MOVE",                symbol: ".MOVE",         group: fixed_income, unit: index, decimals: 2, source: yahoo, ticker: "^MOVE",   aliases: ["ICE BofAML MOVE", "MOVE", ".MOVE"], investing: "/indices/ice-bofaml-move"}
+  - {key: ief,      name: "iShares 7-10 Year Treasury ETF", symbol: "IEF.O",    group: fixed_income, unit: price, decimals: 2, source: yahoo, ticker: "IEF",     aliases: ["iShares 7-10 Year Treasury Bond", "iShares 7-10 Year Treasury Bond ETF", "IEF"], investing: "/etfs/ishares-7-10-year-treasury-bond"}
+  - {key: us30,     name: "United States 30-Year",          symbol: "USc1=",         group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "30 Yr", aliases: ["U.S. 30Y", "United States 30-Year", "US 30Y"], investing: "/rates-bonds/u.s.-30-year-bond-yield"}
+  - {key: us10,     name: "United States 10-Year",          symbol: "US10YT=X",      group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "10 Yr", aliases: ["U.S. 10Y", "United States 10-Year", "US 10Y"], investing: "/rates-bonds/u.s.-10-year-bond-yield"}
+  - {key: us2,      name: "United States 2-Year",           symbol: "TUc1=",         group: fixed_income, unit: yield, decimals: 3, source: treasury, ticker: "2 Yr",  aliases: ["U.S. 2Y", "United States 2-Year", "US 2Y"], investing: "/rates-bonds/u.s.-2-year-bond-yield"}
+  - {key: de10,     name: "Germany 10-Year",                symbol: "DE10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: bundesbank, ticker: "D.I.ZAR.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A", aliases: ["Germany 10Y", "Germany 10-Year"], investing: "/rates-bonds/germany-10-year-bond-yield"}
+  - {key: fr10,     name: "France 10-Year",                 symbol: "FR10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: manual, ticker: "",       aliases: ["France 10Y", "France 10-Year"], investing: "/rates-bonds/france-10-year-bond-yield"}
+  - {key: frcds,    name: "France CDS 5 Years USD",         symbol: "FRGV5YUSAC=R",  group: fixed_income, unit: cds,   decimals: 2, source: manual, ticker: "",       aliases: ["France CDS 5 Years", "France CDS 5 Years USD"], investing: "/rates-bonds/france-cds-5-years-usd"}
+  - {key: jp10,     name: "Japan 10-Year",                  symbol: "JP10YT=RR",     group: fixed_income, unit: yield, decimals: 3, source: mof, ticker: "10Y",       aliases: ["Japan 10Y", "Japan 10-Year"], investing: "/rates-bonds/japan-10-year-bond-yield"}
 
   # ---------------- OTHERS ----------------
-  - {key: eurusd,   name: "EUR/USD - Euro US Dollar",       symbol: "EUR/USD",       group: others, unit: fx,    decimals: 4, source: yahoo, ticker: "EURUSD=X",   aliases: ["EUR/USD", "EUR/USD - Euro US Dollar"]}
-  - {key: usdchf,   name: "USD/CHF - US Dollar Swiss Franc", symbol: "USD/CHF",      group: others, unit: fx,    decimals: 4, source: yahoo, ticker: "CHF=X",      aliases: ["USD/CHF", "USD/CHF - US Dollar Swiss Franc"]}
-  - {key: usdjpy,   name: "USD/JPY - US Dollar Japanese Yen", symbol: "USD/JPY",     group: others, unit: fx,    decimals: 2, source: yahoo, ticker: "JPY=X",      aliases: ["USD/JPY", "USD/JPY - US Dollar Japanese Yen"]}
+  - {key: eurusd,   name: "EUR/USD - Euro US Dollar",       symbol: "EUR/USD",       group: others, unit: fx,    decimals: 4, source: yahoo, ticker: "EURUSD=X",   aliases: ["EUR/USD", "EUR/USD - Euro US Dollar"], investing: "/currencies/eur-usd"}
+  - {key: usdchf,   name: "USD/CHF - US Dollar Swiss Franc", symbol: "USD/CHF",      group: others, unit: fx,    decimals: 4, source: yahoo, ticker: "CHF=X",      aliases: ["USD/CHF", "USD/CHF - US Dollar Swiss Franc"], investing: "/currencies/usd-chf"}
+  - {key: usdjpy,   name: "USD/JPY - US Dollar Japanese Yen", symbol: "USD/JPY",     group: others, unit: fx,    decimals: 2, source: yahoo, ticker: "JPY=X",      aliases: ["USD/JPY", "USD/JPY - US Dollar Japanese Yen"], investing: "/currencies/usd-jpy"}
   # Yahoo has no reliable spot gold/silver series, so futures are used unless the CSV provides spot.
-  - {key: xau,      name: "XAU/USD - Gold Spot US Dollar",  symbol: "XAU/USD",       group: others, unit: price, decimals: 2, source: yahoo, ticker: "GC=F",       aliases: ["XAU/USD", "XAU/USD - Gold Spot US Dollar", "Gold"]}
-  - {key: xag,      name: "XAG/USD - Silver Spot US Dollar", symbol: "XAG/USD",      group: others, unit: price, decimals: 2, source: yahoo, ticker: "SI=F",       aliases: ["XAG/USD", "XAG/USD - Silver Spot US Dollar", "Silver"]}
-  - {key: brent,    name: "Brent Oil Futures",              symbol: "LCO",           group: others, unit: price, decimals: 2, source: yahoo, ticker: "BZ=F",       aliases: ["Brent Oil", "Brent Oil Futures"]}
-  - {key: wti,      name: "Crude Oil WTI Futures",          symbol: "CL",            group: others, unit: price, decimals: 2, source: yahoo, ticker: "CL=F",       aliases: ["Crude Oil WTI", "Crude Oil WTI Futures"]}
-  - {key: btc,      name: "BTC/USD - Bitcoin US Dollar",    symbol: "BTC/USD",       group: others, unit: price, decimals: 2, source: yahoo, ticker: "BTC-USD",    aliases: ["BTC/USD", "BTC/USD - Bitcoin US Dollar", "Bitcoin"]}
-  - {key: ttf,      name: "ICE Dutch TTF Natural Gas Futures", symbol: "TFMBMc1",    group: others, unit: price, decimals: 2, source: yahoo, ticker: "TTF=F",      aliases: ["Dutch TTF Natural Gas", "ICE Dutch TTF Natural Gas Futures"]}
+  - {key: xau,      name: "XAU/USD - Gold Spot US Dollar",  symbol: "XAU/USD",       group: others, unit: price, decimals: 2, source: yahoo, ticker: "GC=F",       aliases: ["XAU/USD", "XAU/USD - Gold Spot US Dollar", "Gold"], investing: "/currencies/xau-usd"}
+  - {key: xag,      name: "XAG/USD - Silver Spot US Dollar", symbol: "XAG/USD",      group: others, unit: price, decimals: 2, source: yahoo, ticker: "SI=F",       aliases: ["XAG/USD", "XAG/USD - Silver Spot US Dollar", "Silver"], investing: "/currencies/xag-usd"}
+  - {key: brent,    name: "Brent Oil Futures",              symbol: "LCO",           group: others, unit: price, decimals: 2, source: yahoo, ticker: "BZ=F",       aliases: ["Brent Oil", "Brent Oil Futures"], investing: "/commodities/brent-oil"}
+  - {key: wti,      name: "Crude Oil WTI Futures",          symbol: "CL",            group: others, unit: price, decimals: 2, source: yahoo, ticker: "CL=F",       aliases: ["Crude Oil WTI", "Crude Oil WTI Futures"], investing: "/commodities/crude-oil"}
+  - {key: btc,      name: "BTC/USD - Bitcoin US Dollar",    symbol: "BTC/USD",       group: others, unit: price, decimals: 2, source: yahoo, ticker: "BTC-USD",    aliases: ["BTC/USD", "BTC/USD - Bitcoin US Dollar", "Bitcoin"], investing: "/crypto/bitcoin/btc-usd"}
+  - {key: ttf,      name: "ICE Dutch TTF Natural Gas Futures", symbol: "TFMBMc1",    group: others, unit: price, decimals: 2, source: yahoo, ticker: "TTF=F",      aliases: ["Dutch TTF Natural Gas", "ICE Dutch TTF Natural Gas Futures"], investing: "/commodities/dutch-ttf-gas-c1-futures"}
 
   # ---------------- DASHBOARD ONLY (not on the sheet): used to read the day ----------------
   # Equal-weight S&P 500 vs the cap-weighted index = market breadth. SOX = chips (the AI trade). DXY = the dollar.

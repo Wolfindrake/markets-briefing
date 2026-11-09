@@ -84,7 +84,10 @@
     SHOW.forEach(function (c) { hr.append(el("th", null, COLS[c])); }); thead.append(hr); t.append(thead);
     var tb = el("tbody");
     (snap[S.group] || []).forEach(function (r) {
-      var tr = el("tr"), nm = el("td", "nm"); nm.append(el("b", null, r[0]), el("small", null, r[idx.symbol]));
+      var tr = el("tr"), nm = el("td", "nm"); nm.append(el("b", null, r[0]));
+      var sm = el("small", null, r[idx.symbol]); var lk = (D.links || {})[r[0]];
+      if (lk && /^https:\/\/www\.investing\.com\//.test(lk)) { var a = el("a", "inv", "Investing ↗"); a.href = lk; a.target = "_blank"; a.rel = "noopener"; a.title = "Open on Investing.com"; a.addEventListener("click", function (e) { e.stopPropagation(); }); sm.append(" · ", a); }
+      nm.append(sm);
       tr.append(nm);
       SHOW.forEach(function (c) {
         var v = r[idx[c]];
@@ -388,6 +391,8 @@
     $("#updEdit").href = r + "/edit/main/content/briefing.yaml";
     $("#updCsv").href = r + "/upload/main/data/imports";
     $("#updLog").href = r + "/actions";
+    var inv = (D.site && D.site.investing_watchlist) || "https://www.investing.com/portfolio/";
+    $("#updInv").href = /^https:\/\/www\.investing\.com\//.test(inv) ? inv : "https://www.investing.com/portfolio/";
     $("#upd").hidden = false;
   }
   document.addEventListener("click", function (e) { var u = $("#upd"); if (u && u.open && !u.contains(e.target)) u.open = false; });

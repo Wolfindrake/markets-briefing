@@ -4,7 +4,8 @@ site:
   title: "Markets Briefing"
   subtitle: "Daily cross-asset dashboard and one-page briefing sheet"
   team_label: ""            # e.g. your team name, printed in the sheet footer if set
-  repo_url: "https://github.com/Wolfindrake/markets-briefing"   # optional, e.g. https://github.com/you/markets-briefing (found automatically on github.io)
+  repo_url: "https://github.com/Wolfindrake/markets-briefing"   # optional
+  investing_watchlist: "https://www.investing.com/portfolio/"   # your Investing.com watchlist (opens from the Update menu), e.g. https://github.com/you/markets-briefing (found automatically on github.io)
 
 timezones:
   local: "Europe/Madrid"    # shown as CET/CEST on the sheet
@@ -28,6 +29,8 @@ history:
 news:
   max_age_hours: 36
   feeds:
+    - {source: "Bloomberg", url: "https://feeds.bloomberg.com/markets/news.rss"}
+    - {source: "Bloomberg", url: "https://feeds.bloomberg.com/economics/news.rss"}
     - {source: "Financial Times", url: "https://www.ft.com/markets?format=rss"}
     - {source: "Financial Times", url: "https://www.ft.com/world?format=rss"}
     - {source: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
