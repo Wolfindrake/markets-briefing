@@ -28,6 +28,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  issues: write      # market alerts are opened as issues, which GitHub emails to you
 
 concurrency:
   group: refresh
@@ -77,6 +78,12 @@ jobs:
             git pull --rebase -X theirs --autostash || true   # if runs overlap, today's freshly built files win
             git push
           fi
+
+      - name: Market alert (a GitHub issue, emailed to you)
+        if: hashFiles('alert.md') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue create --title "Market alert $(date -u +%Y-%m-%d)" --body-file alert.md || true
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
