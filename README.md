@@ -62,6 +62,18 @@ Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site an
 
 ---
 
+## 2b. Lords of Finance meter, Fed odds, alerts
+
+- **Long / Short meter** (Lords of Finance page, and small on Markets): about ten signals (trend, momentum, overshoot,
+  VIX, 10Y yield, dollar, breadth, news mood, data surprises, Fed odds, reaction-map pattern) scored -1 to +1 and
+  combined. The needle goes to the extremes only when strong signals agree, and is pulled to the middle when they
+  conflict or CPI / FOMC / payrolls is due before the next close. Every call is logged in `data/history/meter.csv` and
+  scored on the next session, so the page shows its real hit rate. Rule-based, for the class game, not advice.
+- **Fed meeting odds** (Macro & Data): from 30-day fed funds futures on Yahoo, the CME FedWatch arithmetic.
+- **News mood**: finance word lists applied to the session's FT, Bloomberg, MarketWatch and CNBC headlines.
+- **Alerts**: big moves (S&P ±2%, VIX +20%, 10Y ±10 bp), a Strong meter reading, a large Fed-odds swing or a
+  hawkish/dovish data surprise open a GitHub issue in the repo, and GitHub emails it to you.
+
 ## 3. Where everything comes from
 
 | What | Source |
@@ -73,7 +85,8 @@ Investing.com watchlist CSV into `data/imports/`. If you do nothing, the site an
 | Brazil 50, MSCI World/Europe/EM, France 10Y, France 5Y CDS | Your Investing.com CSV (no free source) |
 | GDP, jobs, CPI, core PCE, Fed and ECB rates, wages | FRED, Federal Reserve Bank of St. Louis (free, no key) |
 | S&P equal-weight (RSP), semiconductors (SOX), dollar index (DXY): dashboard only | Yahoo Finance |
-| News | Publishers' public RSS feeds: headline, summary and link only (`config/settings.yaml`) |
+| Fed funds futures (meeting odds) | Yahoo Finance (ZQ contracts) |
+| News | Publishers' public RSS feeds (FT, Bloomberg, MarketWatch, CNBC): headline, summary and link only (`config/settings.yaml`) |
 
 **Why no FT/Bloomberg logins.** The job never signs in with your FT, Bloomberg or Investing.com password.
 Paid sites block automated logins (Bloomberg's robot check), their terms forbid automated access and republishing,

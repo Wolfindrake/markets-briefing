@@ -306,3 +306,25 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 
 .mkt td.nm a.inv { color: var(--gold); text-decoration: none; font-weight: 600; }
 .mkt td.nm a.inv:hover { text-decoration: underline; }
+
+/* Long / Short meter */
+.meter-wrap { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 18px; align-items: center; }
+@media (max-width: 700px) { .meter-wrap { grid-template-columns: minmax(0, 1fr); } }
+.gauge .gsvg { width: 100%; height: auto; display: block; }
+.gauge.small { max-width: 260px; margin: 0 auto; }
+.gneedle { transition: transform 1.4s cubic-bezier(.2,.9,.25,1.05); }
+@media (prefers-reduced-motion: reduce) { .gneedle { transition: none; } }
+.glab { font-size: 11px; font-weight: 700; letter-spacing: .1em; fill: var(--muted); font-family: var(--sans); }
+.meter-read .zone { font-family: var(--serif); font-size: 30px; font-weight: 600; }
+.meter-read .zone.flat { color: var(--gold); }
+.meter-read .conv { font-size: 15px; font-weight: 600; margin-top: 2px; }
+.mini-read { text-align: center; font-weight: 600; margin: 4px 0 0; }
+.meter-mini { cursor: pointer; }
+.factors { margin-top: 12px; border-top: 1px solid var(--line); }
+.factor { display: grid; grid-template-columns: minmax(0, 1fr) 120px 48px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.factor .fl b { display: block; font-size: 13.5px; font-weight: 600; } .factor .fl small { color: var(--muted); font-size: 12px; }
+.fbar { position: relative; height: 8px; background: var(--band); border-radius: 99px; }
+.fbar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.fbar span { position: absolute; top: 0; bottom: 0; border-radius: 99px; } .fbar .pos { background: var(--up); } .fbar .neg { background: var(--down); }
+.fv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
+@media (max-width: 560px) { .factor { grid-template-columns: minmax(0, 1fr) 80px 40px; } }

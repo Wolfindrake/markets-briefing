@@ -397,6 +397,66 @@
   }
   document.addEventListener("click", function (e) { var u = $("#upd"); if (u && u.open && !u.contains(e.target)) u.open = false; });
 
+
+  // ------------------------------------------------------------------ Long / Short meter
+  function gaugeSVG(needle, small) {
+    var ns = "http://www.w3.org/2000/svg", w = 240, h = 140, cx = 120, cy = 124, R = 100;
+    var svg = document.createElementNS(ns, "svg"); svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("class", "gsvg");
+    svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Meter from short to long");
+    function arc(a0, a1, color) {
+      var p0 = [cx + R * Math.cos(a0), cy - R * Math.sin(a0)], p1 = [cx + R * Math.cos(a1), cy - R * Math.sin(a1)];
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", "M" + p0[0].toFixed(1) + " " + p0[1].toFixed(1) + " A " + R + " " + R + " 0 0 1 " + p1[0].toFixed(1) + " " + p1[1].toFixed(1));
+      path.setAttribute("stroke", color); path.setAttribute("stroke-width", small ? 16 : 18); path.setAttribute("fill", "none"); svg.append(path);
+    }
+    var segs = [["var(--down)", 0.85], ["var(--down)", 0.45], ["var(--gold)", 0.25], ["var(--up)", 0.45], ["var(--up)", 0.85]];
+    for (var i = 0; i < 5; i++) { var a0 = Math.PI - i * Math.PI / 5 - 0.012, a1 = Math.PI - (i + 1) * Math.PI / 5 + 0.012; arc(a0, a1, segs[i][0]); svg.lastChild.setAttribute("opacity", segs[i][1]); }
+    [["SHORT", 22], ["LONG", 218]].forEach(function (t) { var tx = document.createElementNS(ns, "text"); tx.setAttribute("x", t[1]); tx.setAttribute("y", 138); tx.setAttribute("text-anchor", "middle"); tx.setAttribute("class", "glab"); tx.textContent = t[0]; svg.append(tx); });
+    var g = document.createElementNS(ns, "g"); g.setAttribute("class", "gneedle");
+    var ln = document.createElementNS(ns, "line"); ln.setAttribute("x1", cx); ln.setAttribute("y1", cy); ln.setAttribute("x2", cx); ln.setAttribute("y2", cy - R + 14);
+    ln.setAttribute("stroke", "var(--ink)"); ln.setAttribute("stroke-width", 4); ln.setAttribute("stroke-linecap", "round");
+    var hub = document.createElementNS(ns, "circle"); hub.setAttribute("cx", cx); hub.setAttribute("cy", cy); hub.setAttribute("r", 8); hub.setAttribute("fill", "var(--gold)");
+    g.append(ln, hub); svg.append(g);
+    var deg = Math.max(-1, Math.min(1, needle || 0)) * 90;
+    g.style.transformOrigin = cx + "px " + cy + "px"; g.style.transform = "rotate(-90deg)";
+    requestAnimationFrame(function () { requestAnimationFrame(function () { g.style.transform = "rotate(" + deg.toFixed(1) + "deg)"; }); });
+    return svg;
+  }
+  function renderMeter() {
+    var M = D.meter; if (!M) { $("#meterMini").hidden = true; return; }
+    var cls = M.needle > 0.2 ? "up" : M.needle < -0.2 ? "down" : "flat";
+    clear($("#gauge")).append(gaugeSVG(M.needle, false)); clear($("#gaugeMini")).append(gaugeSVG(M.needle, true));
+    var r = clear($("#meterRead")); r.append(el("div", "zone " + cls, M.zone), el("div", "conv", M.conviction + "% conviction"), el("p", "muted", M.note || ""));
+    $("#meterMiniRead").textContent = M.zone + " · " + M.conviction + "% conviction";
+    $("#meterHorizon").textContent = M.horizon || "";
+    var f = clear($("#factors"));
+    (M.signals || []).forEach(function (s) {
+      var row = el("div", "factor"); var lab = el("div", "fl"); lab.append(el("b", null, s.name), el("small", null, s.why)); row.append(lab);
+      var bar = el("div", "fbar"); var fill = el("span", s.score >= 0 ? "pos" : "neg"); fill.style.width = Math.round(Math.abs(s.score) * 50) + "%";
+      if (s.score >= 0) fill.style.left = "50%"; else fill.style.right = "50%"; bar.append(fill); row.append(bar);
+      row.append(el("div", "fv " + (s.score > 0 ? "up" : s.score < 0 ? "down" : ""), (s.score > 0 ? "+" : "") + s.score.toFixed(2)));
+      f.append(row);
+    });
+    var t = M.track || {};
+    $("#meterTrack").textContent = t.calls ? "Track record: right on " + t.hits + " of " + t.calls + " directional calls (" + t.rate + "%), scored on the next session's S&P close." : "Track record: builds up from today; each call is scored on the next session's S&P close.";
+    $("#meterMini").onclick = function () { var b = document.querySelector('.nav button[data-page="lof"]'); if (b) b.click(); };
+    $("#meterMini").onkeydown = function (e) { if (e.key === "Enter") this.onclick(); };
+  }
+  function renderFedMood() {
+    var F = D.fed, box = clear($("#fedOdds"));
+    if (F) {
+      var big = F.hike >= F.cut ? F.hike : F.cut, word = F.hike >= F.cut ? "hike" : "cut";
+      box.append(el("div", "big-num", big + "%"), el("p", null, F.text));
+      box.append(el("p", "muted", "Rate before the meeting " + F.pre.toFixed(2) + "%, priced after it " + F.post.toFixed(2) + "% (" + (F.implied_bp >= 0 ? "+" : "") + F.implied_bp + " bp). Probability of a 25 bp " + word + "."));
+    } else box.append(el("p", "muted", "Futures data not available in this run."));
+    var S = D.sentiment, mb = clear($("#mood"));
+    if (S) {
+      mb.append(el("div", "big-num " + (S.score > 0.15 ? "up" : S.score < -0.15 ? "down" : ""), S.label.charAt(0).toUpperCase() + S.label.slice(1)));
+      mb.append(el("p", null, S.positive + " positive, " + S.negative + " negative, " + S.neutral + " neutral headlines (score " + S.score.toFixed(2) + ")."));
+      var ul = el("ul", "srcs"); (S.top || []).slice(0, 4).forEach(function (h) { var li = el("li"); li.append(el("span", h.score > 0 ? "up" : "down", (h.score > 0 ? "▲ " : "▼ ")), link(h.url, h.headline)); ul.append(li); }); mb.append(ul);
+    }
+  }
+
   // ------------------------------------------------------------------ chart modal
   function openChart(key) {
     if (!key || !D.history || !D.history[key]) return;
@@ -431,7 +491,7 @@
   function renderAll() {
     renderTicker(); renderFresh(); renderChecks(); renderDay(); renderWeek(); renderSources(); renderMovers(); renderHeat(); renderSeven();
     renderDownloads(); renderTrump(); renderLof();
-    renderTape(); renderInternals(); renderMacro(); renderLessons(); renderSteps(); renderUpdate();
+    renderTape(); renderInternals(); renderMacro(); renderLessons(); renderSteps(); renderUpdate(); renderMeter(); renderFedMood();
   }
   function bindTabs(sel, attr, fn) {
     document.querySelectorAll(sel + " button").forEach(function (b) { b.addEventListener("click", function () {

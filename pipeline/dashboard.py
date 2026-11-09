@@ -76,7 +76,7 @@ def trump_section(ai_trump, headlines_trump, previous, market_date, now_iso):
     return t
 
 
-def build(*, rows, market_date, week=None, macro=None, surprises=None, reading=None, cross=None, as_of, text, brief, scored, issues, headlines, trump_heads, inputs, downloads, cfg,
+def build(*, rows, market_date, week=None, macro=None, surprises=None, reading=None, cross=None, extra=None, as_of, text, brief, scored, issues, headlines, trump_heads, inputs, downloads, cfg,
           prev_path: Path, snaps_path: Path, history: dict) -> dict:
     now_iso = datetime.now(ZoneInfo("UTC")).isoformat(timespec="seconds")
     prev = json.loads(prev_path.read_text()) if prev_path.exists() else {}
@@ -144,6 +144,7 @@ def build(*, rows, market_date, week=None, macro=None, surprises=None, reading=N
         "surprises": surprises or [],
         "reading": reading or {},
         "crosscheck": cross or {},
+        **(extra or {}),
         "trumpImpact": trump_section(text.get("trump"), trump_heads, prev.get("trumpImpact"), market_date, now_iso),
         "verification": {"overallStatus": "verified" if (not issues and (cross or {}).get("status") == "verified") else "partial",
                          "note": ("Numbers from free official and market sources, refreshed automatically after the US close. "

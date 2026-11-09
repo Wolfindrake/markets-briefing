@@ -14,7 +14,8 @@ import shutil
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from . import calendar, dashboard, extras, fetch, history, importers, journal, macro, method, narrative, news, verify
+from . import calendar, dashboard, extras, fedwatch, fetch, history, importers, journal, macro, meter, method, narrative, news, verify
+from .config import ROOT
 from .compute import PERF_KEYS, base_row, display, fill_perf_from_history, is_rate, row_from_series, row_from_values
 from .config import (CONTENT_DIR, DATA_DIR, DOWNLOADS, HISTORY_FILE, IMPORTS_DIR, JOURNAL_FILE, MANUAL_DIR, SEED_FILE, SITE_DATA,
                      instruments, load_yaml, settings)
@@ -149,6 +150,7 @@ def main(argv=None):
     macro_ = macro.dashboard(rows, args.offline, (brief or {}).get("macro_extra"))
     surprises_ = macro.surprises(week_all, rows, market_date, macro_.get("cpiYoy"))
     tape_ = method.tape(rows)
+    fed = fedwatch.odds(market_date, args.offline)   # Fed meeting odds from fed funds futures (FedWatch method)
 
     # ---- news (public RSS headlines) and the dashboard text (automatic, optionally improved by AI)
     feeds = (cfg.get("news") or {}).get("feeds", [])
@@ -170,6 +172,9 @@ def main(argv=None):
     cross = verify.run(rows, market_date, inputs.get("csv_vals"), inputs.get("csv_date"), texts=claims,
                        calendar_rows=week_all, headlines=None if args.offline else heads, offline=args.offline)
     log.info("cross-checks: %d/%d passed", cross["passed"], cross["total"])
+    sent = meter.sentiment(heads)
+    if fed:
+        text["sheet"]["highlights"] = [f"Fed: {fed['text']}"] + list(text["sheet"].get("highlights", []))[:8]
     trump_heads = news.about(heads, ["Trump", "White House", "tariff", "Bessent", "Warsh"], 10)
 
     # ---- the one-page sheet: your own text if current, else the AI/automatic text
@@ -219,12 +224,23 @@ def main(argv=None):
     spx_series = history.merge_series(stored_after.get("spx", []), fetched.get("spx", []))
     scored = journal.score(entries, spx_series) if spx_series else {"entries": [dict(e, status="no S&P data") for e in entries]}
 
+    # ---- Lords of Finance meter (long / short), its track record, and alerts
+    ls = meter.build(rows, spx_series, tape_, surprises_, fed, sent, upcoming, market_date, macro_)
+    ls["track"] = {} if args.offline else meter.track(DATA_DIR / "history" / "meter.csv", market_date, ls, spx_series)
+    ls["horizon"] = "S&P 500, next session (class game rules: entered at the open, held to the close before the next class)"
+    al = [] if args.offline else meter.alerts(rows, ls, fed, surprises_)
+    alert_file = ROOT / "alert.md"
+    if al:
+        alert_file.write_text(f"Market date {market_date}\n\n" + "\n".join(f"- {a}" for a in al)
+                              + "\n\nOpen the site: https://wolfindrake.github.io/markets-briefing/\n", encoding="utf-8")
+    elif alert_file.exists():
+        alert_file.unlink()
     over = method.overshoot(rows, spx_series)
     reading = {"tape": tape_, "internals": method.internals(rows), "overshoot": over,
                "lessons": method.lessons(rows, tape_, surprises_, macro_), "library": method.library(),
                "steps": method.steps(rows, tape_, surprises_, over, upcoming, view, heads, text["simple"].get("forces"))}
 
-    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
+    data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, extra={"meter": ls, "fed": fed, "sentiment": sent}, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
                            issues=issues, headlines=heads, trump_heads=trump_heads, inputs=inputs, downloads=downloads, cfg=cfg,
                            prev_path=SITE_DATA / "dashboard.json", snaps_path=DATA_DIR / "snapshots.json", history=hist_out)
     (SITE_DATA / "dashboard.json").write_text(json.dumps(data, default=str, ensure_ascii=False), encoding="utf-8")

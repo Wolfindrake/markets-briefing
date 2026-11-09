@@ -110,6 +110,37 @@ def test_tape_patterns():
     hawk = [r("us2", "yield", 0.10, 2.0), r("us10", "yield", 0.06, 1.2), r("spx", "index", -50, -1.0), r("eurusd", "fx", -0.005, -0.4)]
     assert method.tape(hawk)["key"] == "hawkish"
 
+
+def test_meter_and_sentiment():
+    from pipeline import meter
+    assert meter.headline_score("Stocks rally as inflation cools") > 0
+    assert meter.headline_score("Stocks tumble on recession fears") < 0
+    def r(key, unit, last, chg, pct):
+        return {"key": key, "unit": unit, "last": last, "chg": chg, "chg_pct": pct}
+    up = [{"date": f"2026-{(i // 28) + 9:02d}-{(i % 28) + 1:02d}", "close": 100 + i * 0.5} for i in range(60)]
+    bull = [r("vix", "index", 14, -2, -12), r("us10", "yield", 4.5, -0.08, -1.7), r("dxy", "index", 100, -0.5, -0.5),
+            r("rsp", "price", 180, 2, 1.2), r("spx", "index", 129.5, 0.5, 0.39)]
+    heads = [{"headline": "Stocks rally as inflation cools"}, {"headline": "Shares rise on soft landing hopes"}]
+    m = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads), [], up[-1]["date"])
+    assert m["needle"] > 0.4 and "Long" in m["zone"], m
+    bear = [r("vix", "index", 24, 5, 26), r("us10", "yield", 4.9, 0.12, 2.5), r("dxy", "index", 100, 0.6, 0.6),
+            r("rsp", "price", 180, -3, -1.8)]
+    down = [{"date": x["date"], "close": 200 - i * 0.5} for i, x in enumerate(up)]
+    m2 = meter.build(bear, down, {"key": "hawkish", "name": "Hawkish"}, [], None,
+                     meter.sentiment([{"headline": "Stocks tumble on recession fears"}]), [], down[-1]["date"])
+    assert m2["needle"] < -0.4 and "Short" in m2["zone"], m2
+    m3 = meter.build(bull, up, {"key": "dovish", "name": "Dovish"}, [], None, meter.sentiment(heads),
+                     [{"day": "Tue", "event": "CPI y/y, 13:30 GMT"}], up[-1]["date"])
+    assert abs(m3["needle"]) < abs(m["needle"])   # event risk pulls the needle to the middle
+
+
+def test_fed_odds_arithmetic():
+    import calendar as cal
+    pre, imp, d = 100 - 96.12, 100 - 95.98, 9
+    n = cal.monthrange(2026, 12)[1]
+    post = (imp - pre * d / n) / ((n - d) / n)
+    assert abs((post - pre) / 0.25 - 0.79) < 0.02   # ~79% odds of a December hike, as checked by hand
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

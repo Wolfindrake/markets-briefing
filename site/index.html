@@ -94,6 +94,10 @@
       </div>
 
       <aside class="col-side">
+        <article class="card meter-mini" id="meterMini" tabindex="0" role="button" aria-label="Open the Long / Short meter">
+          <div class="card-head"><h2>Long / Short meter</h2><span class="muted">S&amp;P 500, next session</span></div>
+          <div class="gauge small" id="gaugeMini"></div><p class="mini-read" id="meterMiniRead"></p>
+        </article>
         <article class="card">
           <div class="card-head"><h2>Market internals</h2></div>
           <ul class="internals" id="internals"></ul>
@@ -123,6 +127,10 @@
 
   <!-- ===================== MACRO & DATA ===================== -->
   <section class="page" id="page-macro" hidden>
+    <div class="grid2">
+      <article class="card"><h2>Fed meeting odds</h2><div id="fedOdds"></div><p class="hint">From 30-day fed funds futures, the same method as CME FedWatch.</p></article>
+      <article class="card"><h2>News mood</h2><div id="mood"></div><p class="hint">Finance word lists applied to the session's headlines (FT, Bloomberg, MarketWatch, CNBC).</p></article>
+    </div>
     <div class="grid2">
       <article class="card"><h2>Where are we in the cycle?</h2><div id="cycle"></div></article>
       <article class="card"><h2>Is policy really tight?</h2><div id="realRate"></div></article>
@@ -172,6 +180,13 @@
 
   <!-- ===================== LORDS OF FINANCE ===================== -->
   <section class="page" id="page-lof" hidden>
+    <article class="card meter-card">
+      <div class="card-head"><h2>Long / Short meter</h2><span class="muted" id="meterHorizon"></span></div>
+      <div class="meter-wrap"><div class="gauge" id="gauge"></div><div class="meter-read" id="meterRead"></div></div>
+      <div class="factors" id="factors"></div>
+      <p class="hint" id="meterTrack"></p>
+      <p class="hint">A rule-based reading of today's signals for the class game, not investment advice. It only reaches the extremes when strong signals agree; it stays near the middle when they conflict or a big event is due before the next close.</p>
+    </article>
     <article class="card lof"><h2>Lords of Finance</h2>
       <p class="muted">Long or short the S&amp;P 500 before 9:30 New York time on a class day. Entered at the open, held to the close of the day before the next class. A missed round counts as wrong.</p>
       <div id="lofCurrent"></div><div class="kpis" id="lofKpis"></div></article>
