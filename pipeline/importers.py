@@ -128,6 +128,10 @@ def stale_intraday(taken: str | None, as_of: str, now: datetime | None = None) -
         n = (now or datetime.now(tz=ny)).astimezone(ny)
     except (ValueError, KeyError):
         return False
+    if t.date().isoformat() > as_of:
+        # taken after that session's day (a weekend or next-morning sync): 24-hour markets (FX, gold, oil, bitcoin)
+        # have already moved into the next session, so the session's own closes are the right numbers.
+        return True
     before_close = t.date().isoformat() == as_of and (t.hour, t.minute) < (16, 10)
     closed_since = n.date().isoformat() > as_of or (n.date().isoformat() == as_of and (n.hour, n.minute) >= (16, 10))
     return before_close and closed_since

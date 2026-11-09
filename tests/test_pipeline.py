@@ -187,6 +187,7 @@ def test_extension_csv_and_intraday_rule():
     assert importers.stale_intraday("2026-11-10T18:00:00Z", "2026-11-10", t("2026-11-10T22:40:00+00:00"))
     assert not importers.stale_intraday("2026-11-10T18:00:00Z", "2026-11-10", t("2026-11-10T18:05:00+00:00"))
     assert not importers.stale_intraday("2026-11-10T22:00:00Z", "2026-11-10", t("2026-11-10T22:40:00+00:00"))
+    assert importers.stale_intraday("2026-11-09T01:58:00Z", "2026-11-06", t("2026-11-09T02:05:00+00:00"))   # Sunday sync
 
 
 def test_extension_headlines():
@@ -211,6 +212,44 @@ def test_extension_headlines():
     rss = [{"headline": got[1]["headline"], "url": "https://www.ft.com/content/abc?x=1", "source": "Financial Times",
             "ts": "2026-11-08T00:00:00+00:00", "session": False}]
     assert len(news.merge(rss, got)) == 2      # same FT story from RSS and the page counted once
+
+
+def test_story_reads_like_a_person():
+    """Connectors, context and no bot labels in the sheet text."""
+    from pipeline import story
+    spx = {**IDX, "last": 7376.86, "prev": 7353.73, "chg": 23.13, "chg_pct": 0.31, "date": "2026-11-06",
+           "perf": {"week": -2.7, "ytd": 7.8}}
+    assert story.today_and_week(spx) == "+0.3% today but -2.7% on the week"
+    assert story.ytd(spx).startswith(", still +7.8% YTD")
+    assert story.mood([-6.0, -6.0, 2.0, 0.3]) == "weak" and story.mood([1.1, 0.9, -0.5, 0.3]) in ("higher", "mixed")
+    s = [{"event": "Nonfarm payrolls", "region": "US", "date": "2026-11-06", "actual": "165k", "consensus": "65k",
+          "previous": "29k", "signal": "growth_pos"},
+         {"event": "Retail Sales y/y", "region": "EZ", "date": "2026-11-06", "actual": "0.4%", "consensus": "0.6%",
+          "previous": "0.8%", "signal": "growth_neg"}]
+    out = story.build([spx], [], None, s, {}, {"meeting": "2026-12-09", "hike": 77, "cut": 0, "change_pp": 11}, "2026-11-06")
+    assert out["overview"].startswith("US payrolls came in far above expectations at 165k against 65k")
+    assert not any("surprise" in h.lower() for h in out["highlights"])
+    assert out["highlights"][0].startswith("Fed: a 25 bp hike on 9 December is priced at about 77%")
+
+
+def test_why_blocks_explain_with_evidence():
+    from pipeline import why
+    rows = [
+        {**IDX, "last": 7376.86, "prev": 7353.73, "chg": 23.13, "chg_pct": 0.31, "date": "2026-11-06", "perf": {"week": -2.7}},
+        {"key": "rsp", "name": "RSP", "unit": "price", "last": 190.0, "prev": 190.76, "chg": -0.76, "chg_pct": -0.4, "date": "2026-11-06", "perf": {}},
+        {**YLD, "last": 4.86, "prev": 4.84, "chg": 0.02, "chg_pct": 0.4, "date": "2026-11-06", "perf": {"week": -8.0}},
+        {"key": "brent", "name": "Brent", "unit": "price", "last": 98.32, "prev": 98.29, "chg": 0.03, "chg_pct": 0.03, "date": "2026-11-06", "perf": {"week": -16.4}},
+    ]
+    s = [{"event": "Nonfarm payrolls", "region": "US", "date": "2026-11-06", "actual": "165k", "consensus": "65k", "signal": "growth_pos"}]
+    heads = [{"headline": "Spanish farmers told to keep olive oil off the market", "source": "Financial Times", "url": "u1"},
+             {"headline": "Oil extends biggest weekly decline since 2020", "source": "Bloomberg", "url": "u2"}]
+    out = why.build(rows, {}, s, {"meeting": "2026-12-09", "hike": 77, "cut": 0, "change_pp": 11}, heads, "2026-11-06")
+    B = {b["key"]: b for b in out["blocks"]}
+    assert "profit side won" in " ".join(B["equities"]["why"]) and "narrow" in " ".join(B["equities"]["why"])
+    assert any("77% chance of a hike" in w for w in B["rates"]["why"])
+    oil = " ".join(B["commodities"]["why"])
+    assert "Oil extends biggest weekly decline" in oil and "olive" not in oil      # evidence, but not olive oil
+    assert out["links"] and out["chain"][0].startswith("payrolls 165k")
 
 
 if __name__ == "__main__":

@@ -68,3 +68,15 @@ instruments:
   - {key: sox,      name: "PHLX Semiconductor Index",       symbol: "SOX",           group: equities, unit: index, decimals: 2, source: yahoo, ticker: "^SOX",       aliases: ["PHLX Semiconductor", "Philadelphia Semiconductor", "SOX"], sheet: false}
   - {key: dxy,      name: "US Dollar Index",                symbol: "DXY",           group: others,   unit: index, decimals: 2, source: yahoo, ticker: "DX-Y.NYB",   aliases: ["US Dollar Index", "DXY"], sheet: false}
   - {key: hyg,      name: "High Yield Corporate Bond ETF (HYG)", symbol: "HYG",       group: fixed_income, unit: price, decimals: 2, source: yahoo, ticker: "HYG",        aliases: ["HYG"], sheet: false}
+  # The 11 S&P 500 sectors (SPDR sector ETFs): which parts of the market led or lagged, for "Why it moved".
+  - {key: xlk,  name: "Technology sector (XLK)",              symbol: "XLK",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLK",  aliases: ["XLK"],  sheet: false}
+  - {key: xlf,  name: "Financials sector (XLF)",              symbol: "XLF",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLF",  aliases: ["XLF"],  sheet: false}
+  - {key: xle,  name: "Energy sector (XLE)",                  symbol: "XLE",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLE",  aliases: ["XLE"],  sheet: false}
+  - {key: xlv,  name: "Health care sector (XLV)",             symbol: "XLV",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLV",  aliases: ["XLV"],  sheet: false}
+  - {key: xlu,  name: "Utilities sector (XLU)",               symbol: "XLU",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLU",  aliases: ["XLU"],  sheet: false}
+  - {key: xli,  name: "Industrials sector (XLI)",             symbol: "XLI",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLI",  aliases: ["XLI"],  sheet: false}
+  - {key: xly,  name: "Consumer discretionary sector (XLY)",  symbol: "XLY",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLY",  aliases: ["XLY"],  sheet: false}
+  - {key: xlp,  name: "Consumer staples sector (XLP)",        symbol: "XLP",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLP",  aliases: ["XLP"],  sheet: false}
+  - {key: xlb,  name: "Materials sector (XLB)",               symbol: "XLB",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLB",  aliases: ["XLB"],  sheet: false}
+  - {key: xlre, name: "Real estate sector (XLRE)",            symbol: "XLRE", group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLRE", aliases: ["XLRE"], sheet: false}
+  - {key: xlc,  name: "Communication services sector (XLC)",  symbol: "XLC",  group: equities, unit: price, decimals: 2, source: yahoo, ticker: "XLC",  aliases: ["XLC"],  sheet: false}

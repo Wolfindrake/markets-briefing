@@ -32,9 +32,12 @@ def _bp(v):
 
 
 def speakable(text: str) -> str:
-    t = text.replace("%", " percent").replace(" bp", " basis points").replace("&", "and").replace("y/y", "year on year")
+    t = re.sub(r"S&P|S and P|SandP", "S and P", text)
+    t = t.replace("%", " percent").replace(" bp", " basis points").replace("&", " and ").replace("y/y", "year on year")
     t = re.sub(r"\bFOMC\b", "Fed meeting", t)
-    t = re.sub(r"\bS&P\b|\bS and P\b", "S and P", t)
+    t = re.sub(r"\b(\d+)Y\b", r"\1-year", t)
+    t = re.sub(r"(^|\s)\+(\d)", r"\1up \2", t)
+    t = re.sub(r"(^|\s)-(\d)", r"\1down \2", t)
     t = re.sub(r"(\d)k\b", r"\1 thousand", t)
     t = re.sub(r"(\d+) basis points (hike|cut|move)", r"\1 basis point \2", t)
     t = re.sub(r"(\d) pp\b", r"\1 percentage points", t)
@@ -44,10 +47,21 @@ def speakable(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
-def script(rows, market_date, tape_=None, surprises_=None, fed=None, meter=None, upcoming=None, sent=None) -> dict:
+def script(rows, market_date, tape_=None, surprises_=None, fed=None, meter=None, upcoming=None, sent=None, overview: str = "") -> dict:
     R = {r["key"]: r for r in rows if r.get("last") is not None}
     d = date.fromisoformat(market_date)
     out = [f"Your markets briefing for the close of {d:%A} {d.day} {d:%B}."]
+    if overview:
+        # the same story as the headline and the sheet: driver, reaction, the twist
+        out += [s for s in re.split(r"(?<=\.)\s+", overview) if s]
+        bits = []
+        for k, nm in (("sx5e", "Europe's Euro Stoxx"), ("brent", "Brent oil"), ("xau", "gold"), ("btc", "bitcoin")):
+            r = R.get(k)
+            if r and r.get("chg_pct") is not None and abs(r["chg_pct"]) >= 0.5 and nm.split()[-1].lower() not in overview.lower():
+                bits.append(f"{nm} {_pct(r['chg_pct'])}")
+        if bits:
+            out.append("Also: " + ", ".join(bits) + ".")
+        return _finish(out, meter, upcoming, sent)
     s = R.get("spx")
     if s:
         line = f"The S and P 500 closed {_pct(s.get('chg_pct'))}, at {s['last']:,.0f}"
@@ -86,6 +100,10 @@ def script(rows, market_date, tape_=None, surprises_=None, fed=None, meter=None,
             for x in surp))
     if fed:
         out.append(speakable(fed["text"]))
+    return _finish(out, meter, upcoming, sent)
+
+
+def _finish(out, meter, upcoming, sent):
     if sent and sent.get("label"):
         out.append(f"The tone of the news was {sent['label']}.")
     if meter and meter.get("zone"):

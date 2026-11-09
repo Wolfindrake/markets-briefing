@@ -36,7 +36,15 @@ Source: his sheets posted on Blackboard (Market Briefings folder): 21, 22, 23, 2
 
 ## How this repo reproduces it
 - Table, colours, bp conventions, one page: `pipeline/sheet.py`.
-- Performance bullets with "today and on the week" and YTD, regional lead words: `pipeline/narrative.py::sheet_text`.
+- Words written story-first, like his: `pipeline/story.py`.
+  - Each region leads with its biggest mover.
+  - Context comes from five years of history: "the worst day since July", "the biggest weekly fall in at least five
+    years", "back above 4.5%".
+  - Connectors: "but -8.6% on the week", "still +62% YTD".
+  - Causes only where the data shows them: "led by tech", "a narrow move led by the largest stocks".
+  - The overview runs driver, then reaction, then the twist.
+  - Highlights state facts with no "surprise" labels, followed by Bloomberg and FT headlines with market wraps and
+    repeats removed.
 - Overview from the reaction-map read of the day and the biggest data surprise; highlights from actual vs consensus
   (economic calendar) then the session's headlines (Bloomberg, FT).
 - With an AI key the commentary is written in his house style (rules above are in the prompt).

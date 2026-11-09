@@ -50,7 +50,18 @@
 
   <!-- ===================== MARKETS ===================== -->
   <section class="page" id="page-markets">
+    <header class="lede" id="lede" hidden>
+      <p class="kicker" id="ledeKicker"></p>
+      <h1 id="ledeHead"></h1>
+      <p class="standfirst" id="ledeStand"></p>
+    </header>
     <div class="riskstrip" id="riskstrip" aria-label="Risk dashboard"></div>
+    <article class="card why-card" id="whyCard" hidden>
+      <div class="card-head"><h2>Why it moved</h2><span class="muted">In plain words · tap a block to open</span></div>
+      <div class="whychain" id="whyChain" aria-label="How today connects"></div>
+      <div class="whys" id="whys"></div>
+      <button class="linkbtn whymore" id="whyMore" type="button">Full explanation, plus what moves what →</button>
+    </article>
     <article class="card listen-card" id="listenCard" hidden>
       <div class="card-head"><h2>Your 1-minute briefing</h2><span class="muted" id="listenMeta"></span></div>
       <div class="lc-row"><button class="btn primary" id="listenPlay" type="button">▶ Listen</button>
@@ -81,11 +92,6 @@
           <div class="tscroll"><table class="mkt" id="mktTable"></table></div>
           <div class="why"><b>What happened &amp; why</b><p id="driverNote"></p></div>
           <p class="hint">Tap a row for its chart. Yield and CDS changes in basis points (bp).</p>
-        </article>
-
-        <article class="card">
-          <div class="card-head"><h2>Why markets moved</h2><span class="muted" id="commentaryNote"></span></div>
-          <div class="forces" id="forces"></div>
         </article>
 
         <article class="card">
@@ -155,13 +161,21 @@
   <!-- ===================== EXPLAINED ===================== -->
   <section class="page" id="page-explained" hidden>
     <article class="card big"><h2>The big picture</h2><p class="lead" id="bigPicture"></p></article>
+    <article class="card" id="whyFullCard" hidden>
+      <div class="card-head"><h2>Why it moved, asset by asset</h2><span class="muted">What happened · why · what it affects · what to retain</span></div>
+      <p class="hint">“Today's data” = shown by today's numbers or a Bloomberg/FT headline (listed under each block). “Usual pattern” = how this normally works, not proof for today.</p>
+      <div class="whys full" id="whysFull"></div>
+    </article>
+    <article class="card" id="linksCard">
+      <div class="card-head"><h2>What moves what</h2><span class="muted">The cause-and-effect map to keep</span></div>
+      <div class="links" id="links"></div>
+    </article>
     <article class="card"><h2>Today's lessons</h2><div class="lessons" id="lessons"></div></article>
     <article class="card"><h2>How it connects</h2><div class="chain" id="chain"></div><p class="muted" id="chainNote"></p></article>
     <div class="grid2">
       <article class="card"><h2>Key numbers</h2><div class="kn" id="keyNumbers"></div></article>
       <article class="card"><h2>What to watch</h2><ul class="watch" id="watch"></ul></article>
     </div>
-    <article class="card"><h2>Why markets moved, in plain English</h2><div class="forces" id="forcesSimple"></div></article>
     <article class="card"><h2>Around the world</h2><div class="world" id="world"></div></article>
     <article class="card"><details><summary><h2 class="inline">Rules of thumb</h2> <span class="muted">(tap to open)</span></summary><div class="lessons" id="library"></div></details></article>
     <article class="card"><h2>Words you'll hear</h2><dl class="gloss" id="glossary"></dl></article>

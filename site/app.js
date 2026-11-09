@@ -26,6 +26,14 @@
   function snapKey() { return isToday() ? D.currentKey : (D.previousKey || D.currentKey); }
   function fmtTime(iso) { try { return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso; } }
   var NAME_TO_KEY = {};
+  function shortName(n) {   // "ICE Dutch TTF Natural Gas Futures" -> "Dutch gas", "XAG/USD - Silver Spot US Dollar" -> "Silver"
+    var M = { "ICE Dutch TTF Natural Gas Futures": "Dutch gas", "XAU/USD - Gold Spot US Dollar": "Gold", "XAG/USD - Silver Spot US Dollar": "Silver",
+      "BTC/USD - Bitcoin US Dollar": "Bitcoin", "Brent Oil Futures": "Brent", "Crude Oil WTI Futures": "WTI", "CBOE Volatility Index": "VIX",
+      "Dow Jones Industrial Average": "Dow Jones", "Shanghai Shenzhen CSI 300": "CSI 300", "Bovespa Brazil 50": "Brazil 50",
+      "MSCI Emerging Markets": "MSCI EM", "US Small Cap 2000": "Russell 2000", "iShares 7-10 Year Treasury ETF": "IEF (7-10Y)",
+      "France CDS 5 Years USD": "France CDS", "ICE BofAML MOVE": "MOVE" };
+    return M[n] || String(n || "").replace(/ - .*/, "").replace("United States", "US");
+  }
 
   // ------------------------------------------------------------------ chrome
   function renderTicker() {
@@ -113,7 +121,49 @@
     if (f.source) { var s2 = el("p", "src"); s2.append("Source: ", link(f.sourceUrl, f.source)); c.append(s2); }
     return c;
   }
+  // ------------------------------------------------------------------ the headline and "Why it moved"
+  function renderLede() {
+    var L = D.lede, box = $("#lede");
+    box.hidden = !(L && L.headline && isToday());
+    if (box.hidden) return;
+    $("#ledeKicker").textContent = L.kicker || ""; $("#ledeHead").textContent = L.headline; $("#ledeStand").textContent = L.standfirst || "";
+  }
+  function whyBlock(b, open) {
+    var d = el("details", "whyb " + b.key); if (open) d.open = true;
+    var s = el("summary"); var t = el("div", "wt");
+    t.append(el("span", "wk", b.title), el("b", null, b.headline || ""));
+    s.append(t, el("span", "badge " + (b.kind === "data" ? "data" : "pat"), b.kind === "data" ? "Today's data" : "Usual pattern"));
+    d.append(s);
+    var body = el("div", "wbody");
+    if (b.what) { var p = el("p", "what"); p.append(el("b", null, "What happened: "), b.what); body.append(p); }
+    if ((b.why || []).length) { body.append(el("h4", null, "Why")); var u = el("ul", "wy"); b.why.forEach(function (x) { u.append(el("li", null, x)); }); body.append(u); }
+    if ((b.affects || []).length) { body.append(el("h4", null, "What it affects")); var a = el("ul", "af"); b.affects.forEach(function (x) { a.append(el("li", null, x)); }); body.append(a); }
+    if (b.retain) { var r = el("p", "retain"); r.append(el("b", null, "Retain: "), b.retain); body.append(r); }
+    if (b.ask) { var q = el("p", "ask"); q.append(el("b", null, "Test yourself: "), b.ask); body.append(q); }
+    if ((b.evidence || []).length) {
+      var ev = el("ul", "ev"); ev.append(el("li", "evh", "Sources"));
+      b.evidence.forEach(function (e) { var li = el("li"); li.append(link(e.url, e.text), el("small", null, " · " + e.source)); ev.append(li); });
+      body.append(ev);
+    }
+    d.append(body); return d;
+  }
+  function renderWhy() {
+    var W = D.why || {}, blocks = W.blocks || [], ok = blocks.length && isToday();
+    $("#whyCard").hidden = !ok; $("#whyFullCard").hidden = !ok;
+    var c = clear($("#whyChain")), steps = W.chain || [];
+    steps.forEach(function (st, i) { c.append(el("span", "s", st)); if (i < steps.length - 1) c.append(el("span", "a", "→")); });
+    var m = clear($("#whys")), f = clear($("#whysFull"));
+    blocks.forEach(function (b, i) { m.append(whyBlock(b, i === 0)); f.append(whyBlock(b, true)); });
+    var L = clear($("#links"));
+    (W.links || []).forEach(function (x) {
+      var d = el("div", "lk"); d.append(el("h3", null, x.cause));
+      var u = el("ul"); (x.effects || []).forEach(function (e) { u.append(el("li", null, e)); }); d.append(u);
+      d.append(el("p", "because", "Because: " + x.because)); L.append(d);
+    });
+    $("#linksCard").hidden = !(W.links || []).length;
+  }
   function renderForces(target) {
+    if (!$(target)) return;
     var box = clear($(target)); var fs = simple().forces || [];
     if (!fs.length) { box.append(el("p", "muted", "No explanations for this day.")); return; }
     fs.forEach(function (f) { box.append(forceCard(f)); });
@@ -151,7 +201,7 @@
   function renderMovers() {
     var ul = clear($("#movers"));
     ((D.movers || {})[S.mover] || []).forEach(function (m) {
-      var li = el("li"); li.append(el("span", null, m.name), el("span", tone(m.chgPct), m.last + "  " + m.chgPct)); ul.append(li);
+      var li = el("li"); li.append(el("span", null, shortName(m.name)), el("span", tone(m.chgPct), m.last + "  " + m.chgPct)); ul.append(li);
     });
   }
   function heatColor(v, rate) {
@@ -224,6 +274,10 @@
     var w = clear($("#watch")); (s.whatToWatch || []).forEach(function (x) { var li = el("li"); li.append(el("b", null, x.title), el("small", null, x.detail)); w.append(li); });
     if (!(s.whatToWatch || []).length) w.append(el("li", "muted", "Nothing listed."));
     renderForces("#forcesSimple");
+    if ((D.why || {}).chain && D.why.chain.length && isToday()) {   // "How it connects": today's actual chain
+      clear(ch); D.why.chain.forEach(function (st, i) { ch.append(el("span", "s", st)); if (i < D.why.chain.length - 1) ch.append(el("span", "a", "→")); });
+      $("#chainNote").textContent = "Today's chain, from the main data release to stocks. Each step is explained in 'Why it moved' below.";
+    }
     var wa = clear($("#world")); (s.worldAround || []).forEach(function (x) { var d = el("div"); d.append(el("h3", null, x.region), el("div", "muted", x.direction), el("p", null, x.detail)); if (x.note) d.append(el("p", "muted", x.note)); wa.append(d); });
     var g = clear($("#glossary")); ((D.simple || {}).glossary || []).forEach(function (x) { g.append(el("dt", null, x.term), el("dd", null, x.def)); });
   }
@@ -646,8 +700,7 @@
     document.querySelectorAll("#rangeTabs button").forEach(function (x) { x.classList.toggle("on", x === b); }); S.range = +b.dataset.r; drawChart(); }); });
 
   // ------------------------------------------------------------------ wiring
-  function renderDay() { renderHero(); renderMarket(); renderForces("#forces"); renderExplained(); renderNews();
-    $("#commentaryNote").textContent = (ov() && ov().date) || ""; }
+  function renderDay() { renderLede(); renderWhy(); renderHero(); renderMarket(); renderExplained(); renderNews(); }
   function renderAll() {
     renderTicker(); renderFresh(); renderChecks(); renderDay(); renderWeek(); renderSources(); renderMovers(); renderHeat(); renderSeven();
     renderDownloads(); renderTrump(); renderLof();
@@ -669,6 +722,10 @@
     if (go === "listen") { var lb = $("#listenBtn"); if (lb && !lb.hidden) lb.click(); return; }
     var t = document.querySelector('.nav button[data-page="' + go + '"]'); if (t) t.click();
   }); });
+  $("#whyMore").addEventListener("click", function () {
+    var t = document.querySelector('.nav button[data-page="explained"]'); if (t) t.click();
+    setTimeout(function () { $("#whyFullCard").scrollIntoView({ behavior: "smooth" }); }, 60);
+  });
   bindTabs("#mktTabs", "data-g", function (g) { S.group = g; renderMarket(); });
   bindTabs("#moverTabs", "data-m", function (m) { S.mover = m; renderMovers(); });
 

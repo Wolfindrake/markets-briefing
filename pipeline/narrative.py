@@ -94,8 +94,14 @@ def _week(r) -> str | None:
     return "flat" if abs(w) < 0.05 else f"{w:+.1f}%"
 
 
-def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
-    """Sheet commentary in the professor's style: level, 'today and on the week', bp for rates."""
+def sheet_text(rows, headlines, tape_=None, surprises_=None, series=None, fed=None, market_date=None) -> dict:
+    """Sheet commentary in the professor's style, written story-first (see story.py)."""
+    from . import story
+    return story.build(rows, headlines, tape_, surprises_, series, fed, market_date)
+
+
+def sheet_text_plain(rows, headlines, tape_=None, surprises_=None) -> dict:
+    """The earlier list-style writer, kept for reference."""
     R = {r["key"]: r for r in rows if r["last"] is not None}
     nm = lambda k: SHORT.get(k, R[k]["name"])  # noqa: E731
 
@@ -172,7 +178,7 @@ def sheet_text(rows, headlines, tape_=None, surprises_=None) -> dict:
 
 
 def auto(rows: list[dict], market_date: str, as_of: str, headlines: list[dict], week_ahead: list[dict],
-         tape_: dict | None = None, surprises_: list[dict] | None = None) -> dict:
+         tape_: dict | None = None, surprises_: list[dict] | None = None, series: dict | None = None, fed: dict | None = None) -> dict:
     R = {r["key"]: r for r in rows}
     D = {r["key"]: display(r) for r in rows}
     have = lambda k: k in R and R[k]["last"] is not None  # noqa: E731
@@ -264,7 +270,7 @@ def auto(rows: list[dict], market_date: str, as_of: str, headlines: list[dict], 
         "worldAround": world_around,
         "glossary": GLOSSARY,
     }
-    sheet = sheet_text(rows, headlines, tape_, surprises_)
+    sheet = sheet_text(rows, headlines, tape_, surprises_, series, fed, market_date)
     return {"overview": {"date": _nice_date(market_date), "asOf": as_of, "items": items}, "simple": simple, "sheet": sheet,
             "news": [{k: h.get(k) for k in ("headline", "dateISO", "source", "url", "blurb", "session")} for h in headlines[:12]],
             "trump": None, "ai_used": False}
@@ -290,6 +296,17 @@ Follow the course method (top-down, Prof. Dieguez M4S4):
    * Highlights: 7-10 bullets, each "Topic (date): fact with figures against expectations", e.g. "US CPI (14 Oct): headline
      3.7% YoY against 3.6% expected; core 2.6% against 2.5%". Cover data, central banks, earnings (EPS vs estimate),
      sector moves with named stocks, energy/geopolitics, Europe/France.
+   * WRITE LIKE A PERSON, NOT A TABLE. Lead each region with its story (the biggest mover first, not a fixed list).
+     Give numbers context with small connecting words: "but +7.3% on the week", "still +6.8% YTD", "back below 5%",
+     "a record", "the widest since 2011", "the worst day since March 2020" (only when the data shows it).
+     Say why when HEADLINES or SURPRISES support it: "Nasdaq -1.4% to 26,185 on Alphabet", "as money rotated into
+     health care and utilities". Overview = driver, then reaction, then the twist: "...yet the 10Y fell 11 bp back
+     below 5%, because the AI trade disappointed". Never use labels like "hawkish surprise" or "growth-positive
+     surprise" in the sheet: state the fact and let the reader judge. Drop instruments with nothing to say.
+     Patterns from his sheets: "Europe strong: DAX +1.4% and +2.7% on the week, CAC 40 +1.1% and +2.0%." /
+     "US yields fell hard today: 10Y 4.93%, -11 bp and back below 5%." / "On the week the curve barely moved." /
+     "Fed held at 3.75% to 4.00% by 10 to 2." / "Alphabet -12.6% to 283.82, a profit miss with the slowest ad growth
+     in five quarters."
 
 Return ONE JSON object, no prose, with exactly these keys:
 {{

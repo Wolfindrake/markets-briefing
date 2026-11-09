@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 
-from . import fetch
+from . import fetch, importers
 
 CHECK_TICKERS = {"chk_spy": "SPY", "chk_tnx": "^TNX", "chk_gld": "GLD"}
 
@@ -28,7 +28,7 @@ def _pct(series, date):
 
 
 def run(rows, market_date, csv_vals=None, csv_date=None, texts=None, calendar_rows=None, headlines=None,
-        offline=False, consensus_check=None) -> dict:
+        offline=False, consensus_check=None, fed=None) -> dict:
     items = []
     sheet = [r for r in rows if r.get("sheet", True)]
     R = {r["key"]: r for r in rows}
@@ -76,6 +76,8 @@ def run(rows, market_date, csv_vals=None, csv_date=None, texts=None, calendar_ro
         gaps = []
         for k, v in csv_vals.items():
             r = R.get(k)
+            if v.get("taken") and csv_date and importers.stale_intraday(v["taken"], csv_date):
+                continue   # snapshot taken after that session (e.g. on Sunday): the closes were used instead
             if r and r.get("source") not in ("investing_csv",) and r.get("last") and v.get("last"):
                 rel = abs(v["last"] / r["last"] - 1) * 100
                 if rel > 0.5:
@@ -98,6 +100,15 @@ def run(rows, market_date, csv_vals=None, csv_date=None, texts=None, calendar_ro
             add(r["chg"] * (100 if r["unit"] == "yield" else 1))
         for v in (r.get("perf") or {}).values():
             add(v)
+    # figures the commentary derives from the table: spreads (France over Germany, 2s10s) and their weekly change
+    for a, b in (("fr10", "de10"), ("us10", "us2")):
+        if a in R and b in R and R[a].get("last") is not None and R[b].get("last") is not None:
+            add((R[a]["last"] - R[b]["last"]) * 100)
+            wa, wb = (R[a].get("perf") or {}).get("week"), (R[b].get("perf") or {}).get("week")
+            if wa is not None and wb is not None:
+                add(wa - wb)
+    for k in ("hike", "cut", "change_pp"):
+        add((fed or {}).get(k))
     for e in calendar_rows or []:
         for f in ("actual", "consensus", "previous"):
             for n in re.findall(r"\d+(?:\.\d+)?", str(e.get(f, ""))):

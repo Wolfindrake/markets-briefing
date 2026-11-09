@@ -14,7 +14,7 @@ import shutil
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from . import calendar, dashboard, extras, fedwatch, fetch, history, importers, journal, listen, macro, meter, method, narrative, news, verify
+from . import calendar, dashboard, extras, fedwatch, fetch, history, importers, journal, listen, macro, meter, method, narrative, news, story, verify, why
 from .config import ROOT
 from .compute import PERF_KEYS, base_row, display, fill_perf_from_history, is_rate, row_from_series, row_from_values
 from .config import (CONTENT_DIR, DATA_DIR, DOWNLOADS, HISTORY_FILE, IMPORTS_DIR, JOURNAL_FILE, MANUAL_DIR, SEED_FILE, SITE_DATA,
@@ -153,6 +153,12 @@ def main(argv=None):
     macro_ = macro.dashboard(rows, args.offline, (brief or {}).get("macro_extra"))
     surprises_ = macro.surprises(week_all, rows, market_date, macro_.get("cpiYoy"))
     tape_ = method.tape(rows)
+    big_surprise = [s for s in surprises_ if s.get("signal") in ("hawkish", "dovish", "growth_pos", "growth_neg") and s.get("date") == market_date]
+    if tape_ and tape_.get("key") == "quiet" and big_surprise:
+        # small price moves are not a "quiet session" when a big release came out: say what really happened
+        tape_["name"] = "Muted reaction to a big data surprise"
+        tape_["map"] = ("Markets had a reason to move and moved little. Ask why: was the news expected, already priced in, "
+                        "or offset by something else (oil, positioning, the previous days' moves)?")
     fed = fedwatch.odds(market_date, args.offline)   # Fed meeting odds from fed funds futures (FedWatch method)
 
     # ---- news (public RSS headlines) and the dashboard text (automatic, optionally improved by AI)
@@ -165,7 +171,9 @@ def main(argv=None):
     until = datetime(nxt.year, nxt.month, nxt.day, 9, 30, tzinfo=ny).astimezone(ZoneInfo("UTC"))
     heads = [] if args.offline else news.fetch(feeds, since=since, until=until, session_date=market_date)
     heads = news.merge(heads, news.from_imports(IMPORTS_DIR, since, until, market_date))   # + Chrome-extension headlines
-    text = narrative.auto(rows, market_date, as_of, heads, upcoming, tape_, surprises_)
+    series_all = {r["key"]: [p for p in history.merge_series(stored.get(r["key"], []), fetched.get(r["key"], []))
+                             if p["date"] <= market_date] for r in rows}
+    text = narrative.auto(rows, market_date, as_of, heads, upcoming, tape_, surprises_, series_all, fed)
     if not args.offline:
         text = narrative.merge(text, narrative.ai(rows, market_date, heads, upcoming, cfg, tape_, surprises_, macro_),
                                {h["url"] for h in heads})
@@ -175,10 +183,10 @@ def main(argv=None):
              [b for v in (sh.get("performance") or {}).values() for b in v]
     cross = verify.run(rows, market_date, inputs.get("csv_vals"), inputs.get("csv_date"), texts=claims,
                        calendar_rows=week_all, headlines=None if args.offline else heads, offline=args.offline,
-                       consensus_check=consensus_check)
+                       consensus_check=consensus_check, fed=fed)
     log.info("cross-checks: %d/%d passed", cross["passed"], cross["total"])
     sent = meter.sentiment(heads)
-    if fed:
+    if fed and not text["sheet"].get("fed_included") and not any(str(h).startswith("Fed") for h in text["sheet"].get("highlights", [])):
         text["sheet"]["highlights"] = [f"Fed: {fed['text']}"] + list(text["sheet"].get("highlights", []))[:8]
     trump_heads = news.about(heads, ["Trump", "White House", "tariff", "Bessent", "Warsh"], 10)
 
@@ -189,10 +197,16 @@ def main(argv=None):
     pdf_name, xlsx_name = f"{prefix}-{market_date}.pdf", f"{prefix}-{market_date}.xlsx"
     meta = {"title": cfg["sheet"]["title"], "market_date": market_date, "as_of": as_of,
             "source_note": cfg["sheet"]["source_note"], "team_label": cfg["site"].get("team_label", "")}
+    wa = calendar.sheet_rows(upcoming)
+    for e in wa:   # "FOMC decision 9 December, a hike priced at about 77%", as the professor writes it
+        if fed and str(e.get("day", "")).lower() == "ahead" and "fomc" in str(e.get("event", "")).lower() and "priced" not in str(e.get("event", "")):
+            mv, p = ("hike", fed["hike"]) if fed["hike"] >= fed["cut"] else ("cut", fed["cut"])
+            if p >= 10:
+                e["event"] = f"{e['event']}, a {mv} priced at about {p}%"
     if brief_current:
-        sheet_brief = {**brief, "week_ahead": calendar.sheet_rows(upcoming)}
+        sheet_brief = {**brief, "week_ahead": wa}
     else:
-        sheet_brief = {**text["sheet"], "week_ahead": calendar.sheet_rows(upcoming), "sp500_view": {}}
+        sheet_brief = {**text["sheet"], "week_ahead": wa, "sp500_view": {}}
     # one date: any row not from the market close is starred and dated in the footnote (never passed off as fresh)
     dd = lambda iso: f"{iso[8:10]}/{iso[5:7]}"  # noqa: E731
     lag = [r for r in sheet_rows if r.get("date") and r["date"] != market_date]
@@ -215,8 +229,11 @@ def main(argv=None):
     hist_out = {}
     for inst in insts:
         k = inst["key"]
+        if k in why.SECTORS:      # sectors feed "Why it moved" only; no charts, keeps the page light on phones
+            continue
         ser = [r for r in history.merge_series(stored_after.get(k, []), fetched.get(k, [])) if r["date"] <= market_date]
-        hist_out[k] = {"name": inst["name"], "unit": inst["unit"], "points": [[r["date"], round(r["close"], 6)] for r in ser][-keep:]}
+        hist_out[k] = {"name": inst["name"], "unit": inst["unit"],
+                       "points": [[r["date"], round(r["close"], 4 if abs(r["close"]) < 100 else 2)] for r in ser][-keep:]}
 
     # ---- Lords of Finance journal (real game rules)
     entries = journal.load(JOURNAL_FILE)
@@ -247,9 +264,13 @@ def main(argv=None):
                "lessons": method.lessons(rows, tape_, surprises_, macro_), "library": method.library(),
                "steps": method.steps(rows, tape_, surprises_, over, upcoming, view, heads, text["simple"].get("forces"))}
 
+    # ---- one story everywhere: the headline, "Why it moved" and the spoken briefing all start from the same overview
+    overview_txt = text["sheet"].get("overview", "")
+    why_ = why.build(rows, series_all, surprises_, fed, heads, market_date)
+    lede_ = story.lede(rows, surprises_, fed, market_date, overview_txt)
     data = dashboard.build(rows=sheet_rows, week=upcoming, macro=macro_, surprises=surprises_, reading=reading, cross=cross, extra={"meter": ls, "fed": fed, "sentiment": sent, "risk": method.risk_strip(rows, fed),
-                                  "consensusCheck": consensus_check,
-                                  "listen": text.get("listen") or listen.script(rows, market_date, tape_, surprises_, fed, ls, upcoming, sent)}, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
+                                  "consensusCheck": consensus_check, "why": why_, "lede": lede_,
+                                  "listen": text.get("listen") or listen.script(rows, market_date, tape_, surprises_, fed, ls, upcoming, sent, overview_txt)}, market_date=market_date, as_of=as_of, text=text, brief=brief, scored=scored,
                            issues=issues, headlines=heads, trump_heads=trump_heads, inputs=inputs, downloads=downloads, cfg=cfg,
                            prev_path=SITE_DATA / "dashboard.json", snaps_path=DATA_DIR / "snapshots.json", history=hist_out)
     (SITE_DATA / "dashboard.json").write_text(json.dumps(data, default=str, ensure_ascii=False), encoding="utf-8")
