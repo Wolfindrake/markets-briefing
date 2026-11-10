@@ -91,7 +91,7 @@ date,key,open,close,source
 2026-11-09,dax,25815.3,26267.19,investing_csv
 2026-11-09,de10,3.2461,3.2654,investing_csv
 2026-11-09,dji,51643.01,52389.93,investing_csv
-2026-11-09,dxy,102.236,101.682999,yahoo
+2026-11-09,dxy,101.717003,101.683998,yahoo
 2026-11-09,eurusd,1.1224,1.1222,investing_csv
 2026-11-09,fr10,4.764,4.736,investing_csv
 2026-11-09,frcds,90.25,90.28,investing_csv
@@ -101,6 +101,7 @@ date,key,open,close,source
 2026-11-09,ief,92.01,91.8,investing_csv
 2026-11-09,ixic,24777.44,25253.14,investing_csv
 2026-11-09,jp10,2.681,2.665,investing_csv
+2026-11-09,kospi,5034.200195,5018.850098,yahoo
 2026-11-09,move,97.92,92.77,investing_csv
 2026-11-09,msciem,1498.79,1528.74,investing_csv
 2026-11-09,mscieu,2760.04,2809.42,investing_csv
